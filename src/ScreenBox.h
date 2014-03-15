@@ -12,7 +12,9 @@ public:
 	void destroy();
 
 private:
-
+	int _iW;
+	int _iH;
+	bool _bLoop;
 };
 
 #endif //__SCREEN_BOX_H__
