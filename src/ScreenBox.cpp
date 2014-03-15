@@ -10,6 +10,10 @@
 #include <string>
 #include <sstream>
 
+#define POSITION_LOCATION 0
+#define NORMAL_LOCATION 1
+#define TEXCOORD_LOCATION 2
+
 void ScreenBox::init() {
 	std::cout << "> INIT SCREENBOX" <<std::endl;
 
@@ -37,8 +41,46 @@ void ScreenBox::init() {
 	// Use OpenGL context
 	glfwMakeContextCurrent(_pWindow);
 
+	// Iniitalise glew
+	GLenum err = glewInit();
+    if (GLEW_OK != err) {
+          std::cout << "Error: " << glewGetErrorString(err) <<std::endl;
+          exit( EXIT_FAILURE );
+    }
+
 	// OpenGL configs
 	glClearColor(0.2f, 0.2f, 0.2f, 1.f);
+
+	// Init geometry
+	_iQuadTriangleCount = 2;
+	int quad_triangleList[] = {0, 1, 2, 2, 1, 3};
+	float quad_vertices[] = { -0.5f, 0.5f, 0.f, 0.5f, 0.5f, 0.f, -0.5f, -0.5f, 0.f, 0.5f, -0.5f, 0.f };
+	float quad_normals[] = { 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f };
+	float quad_uv[] = {0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 1.f, 1.f };
+
+	// Build vaos and vbos
+	glGenVertexArrays(1, &_quadVAO);
+	glGenBuffers(4,_quadVBOs);
+
+	glBindVertexArray(_quadVAO);
+	// Indexes
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _quadVBOs[0]);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(quad_triangleList), quad_triangleList, GL_STATIC_DRAW);
+    // Vertices
+    glBindBuffer(GL_ARRAY_BUFFER, _quadVBOs[1]);
+    glEnableVertexAttribArray(POSITION_LOCATION);
+    glVertexAttribPointer(POSITION_LOCATION, 3, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT)*3, (void*)0);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quad_vertices), quad_vertices, GL_STATIC_DRAW);
+    // Normals
+    glBindBuffer(GL_ARRAY_BUFFER, _quadVBOs[2]);
+    glEnableVertexAttribArray(NORMAL_LOCATION);
+    glVertexAttribPointer(NORMAL_LOCATION, 3, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT)*3, (void*)0);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quad_normals), quad_normals, GL_STATIC_DRAW);
+    // UVs
+    glBindBuffer(GL_ARRAY_BUFFER, _quadVBOs[3]);
+	glEnableVertexAttribArray(TEXCOORD_LOCATION);
+    glVertexAttribPointer(TEXCOORD_LOCATION, 2, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT)*2, (void*)0);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quad_uv), quad_uv, GL_STATIC_DRAW);
 }
 
 void ScreenBox::launch() {
@@ -52,6 +94,9 @@ void ScreenBox::launch() {
 		 * *************************************************** */
 		glClear(GL_COLOR_BUFFER_BIT);
 		glViewport(0, 0, _iW, _iH);
+
+		glBindVertexArray(_quadVAO);
+		glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
 
 		glfwSwapBuffers(_pWindow);
 
@@ -72,6 +117,10 @@ void ScreenBox::launch() {
 
 void ScreenBox::destroy() {
 	std::cout << "> DESTROY SCREENBOX" <<std::endl;
+
+	glDeleteVertexArrays(1, &_quadVAO);
+	glDeleteBuffers(4, _quadVBOs);
+
 	glfwDestroyWindow(_pWindow);
 	glfwTerminate();
 }

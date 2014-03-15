@@ -23,6 +23,10 @@ private:
 	int _iH;
 	double _dTime;
 	float _fFPS;
+
+	int _iQuadTriangleCount;
+	GLuint _quadVBOs[4];
+	GLuint _quadVAO;
 };
 
 #endif //__SCREEN_BOX_H__
