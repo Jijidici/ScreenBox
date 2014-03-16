@@ -10,8 +10,8 @@
 
 class ShaderManager {
 public:
+	ShaderManager();
 	~ShaderManager();
-	static ShaderManager* getInstance();
 
 	void addShader(std::string sTag, const char* sVSPath, const char* sFSPath);
 	GLuint getShader(std::string sTag);
@@ -21,11 +21,9 @@ public:
 
 
 private:
-	ShaderManager();
 	GLuint loadProgram(const char* vertexShaderFile, const char* fragmentShaderFile);
 	const char* readFile(const char* sFilePath);
 
-	static ShaderManager* _pInstance;
 	std::map<std::string, GLuint> _shaderMap;
 	std::map<std::string, GLuint> _locationMap;
 };

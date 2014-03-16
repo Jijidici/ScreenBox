@@ -7,6 +7,7 @@
 
 #include "GL/glew.h"
 #include "glfw3.h"
+#include "ShaderManager.h"
 
 class ScreenBox {
 public:
@@ -27,6 +28,8 @@ private:
 	int _iQuadTriangleCount;
 	GLuint _quadVBOs[4];
 	GLuint _quadVAO;
+
+	ShaderManager* _pSM;
 };
 
 #endif //__SCREEN_BOX_H__

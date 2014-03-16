@@ -12,7 +12,6 @@
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/type_ptr.hpp"
-#include "ShaderManager.h"
 
 #define POSITION_LOCATION 0
 #define NORMAL_LOCATION 1
@@ -87,16 +86,15 @@ void ScreenBox::init() {
     glBufferData(GL_ARRAY_BUFFER, sizeof(quad_uv), quad_uv, GL_STATIC_DRAW);
 
 	// Build shaders
-	ShaderManager* pSM = ShaderManager::getInstance();
-	pSM->addShader("basic", "shaders/basic.vs", "shaders/basic.fs");
-	pSM->addUniformLocation("basic", "uMatProjection");
-	pSM->addUniformLocation("basic", "uMatView");
-	pSM->addUniformLocation("basic", "uMatModel");
+	_pSM = new ShaderManager();
+	_pSM->addShader("basic", "shaders/basic.vs", "shaders/basic.fs");
+	_pSM->addUniformLocation("basic", "uMatProjection");
+	_pSM->addUniformLocation("basic", "uMatView");
+	_pSM->addUniformLocation("basic", "uMatModel");
 }
 
 void ScreenBox::launch() {
 	std::cout << "> LAUNCH SCREENBOX" <<std::endl;
-	ShaderManager* pSM = ShaderManager::getInstance();
 
 	while(!glfwWindowShouldClose(_pWindow)) {
 		_dTime = glfwGetTime();
@@ -113,10 +111,10 @@ void ScreenBox::launch() {
 		glm::mat4 objectToWorld = glm::rotate(glm::mat4(1.f), 45.f, glm::vec3(0.f, 1.f, 0.f));
 
 		//draw basic quad
-		glUseProgram(pSM->getShader("basic"));
-		glUniformMatrix4fv(pSM->getUniformLocation("uMatProjection"), 1, GL_FALSE, glm::value_ptr(worldToScreen));
-		glUniformMatrix4fv(pSM->getUniformLocation("uMatView"), 1, GL_FALSE, glm::value_ptr(worldToView));
-		glUniformMatrix4fv(pSM->getUniformLocation("uMatModel"), 1, GL_FALSE, glm::value_ptr(objectToWorld));
+		glUseProgram(_pSM->getShader("basic"));
+		glUniformMatrix4fv(_pSM->getUniformLocation("uMatProjection"), 1, GL_FALSE, glm::value_ptr(worldToScreen));
+		glUniformMatrix4fv(_pSM->getUniformLocation("uMatView"), 1, GL_FALSE, glm::value_ptr(worldToView));
+		glUniformMatrix4fv(_pSM->getUniformLocation("uMatModel"), 1, GL_FALSE, glm::value_ptr(objectToWorld));
 		glBindVertexArray(_quadVAO);
 		glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
 
@@ -142,6 +140,8 @@ void ScreenBox::destroy() {
 
 	glDeleteVertexArrays(1, &_quadVAO);
 	glDeleteBuffers(4, _quadVBOs);
+
+	delete _pSM;
 
 	glfwDestroyWindow(_pWindow);
 	glfwTerminate();

@@ -7,8 +7,6 @@
 #include <fstream>
 #include <cassert>
 
-ShaderManager* ShaderManager::_pInstance = nullptr;
-
 ShaderManager::ShaderManager() {
 
 }
@@ -21,13 +19,6 @@ ShaderManager::~ShaderManager() {
 
 	_shaderMap.clear();
 	_locationMap.clear();
-}
-
-ShaderManager* ShaderManager::getInstance() {
-	if(_pInstance == NULL) {
-		_pInstance = new ShaderManager();
-	}
-	return _pInstance;
 }
 
 void ShaderManager::addShader(std::string sTag, const char* sVSPath, const char* sFSPath) {
