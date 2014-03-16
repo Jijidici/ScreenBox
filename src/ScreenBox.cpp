@@ -76,7 +76,7 @@ void ScreenBox::init() {
 	_iSpaceTriangleCount = 0;
 	int iVerticesCount = 0;
 	Assimp::Importer importer;
-	const aiScene* pScene = importer.ReadFile("models/voyager/voyager_carbajal.3ds", aiProcess_Triangulate | aiProcess_GenSmoothNormals);
+	const aiScene* pScene = importer.ReadFile("models/Voyager_1&2/Voyager_17.blend", aiProcess_Triangulate | aiProcess_FlipUVs);
 	for(unsigned int iMesh=0; iMesh<pScene->mNumMeshes; ++iMesh) {
 		const aiMesh* pMesh = pScene->mMeshes[iMesh];
 		int iPrevVerticesCount = space_vertices.size();
@@ -165,7 +165,7 @@ void ScreenBox::init() {
 
 	// Build texture
 	_pTM = new TextureManager();
-	_pTM->generateNamedTexture("texTest", "models/voyager/texures/voyagerwashboard.png", 4);
+	_pTM->generateNamedTexture("spaceTex", "models/Voyager_1&2/texture/tex_01_diff.png", 3);
 }
 
 void ScreenBox::launch() {
@@ -192,7 +192,7 @@ void ScreenBox::launch() {
 		glUniformMatrix4fv(_pSM->getUniformLocation("uMatModel"), 1, GL_FALSE, glm::value_ptr(objectToWorld));
 		glUniform1i(_pSM->getUniformLocation("uTexture1"), 0);
 
-		_pTM->bindTexture("texTest", GL_TEXTURE0);
+		_pTM->bindTexture("spaceTex", GL_TEXTURE0);
 
 		glBindVertexArray(_spaceVAO);
 		glDrawElementsInstanced(GL_TRIANGLES, _iSpaceTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
