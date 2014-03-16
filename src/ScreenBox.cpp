@@ -26,8 +26,8 @@ void ScreenBox::init() {
 	std::cout << "> INIT SCREENBOX" <<std::endl;
 
 	_pWindow = NULL;
-	_iW = 800;
-	_iH = 600;
+	_iW = 1200;
+	_iH = 700;
 
 	 // Initialise GLFW
     if(!glfwInit()) {
@@ -200,7 +200,7 @@ void ScreenBox::launch() {
 
 		// Compute space matrices
 		glm::mat4 worldToScreen = glm::perspective(60.f, static_cast<float>(_iW)/static_cast<float>(_iH), 0.1f, 100.f);
-		glm::mat4 worldToView = TrackBallCamera::getInstance()->getViewMatrix();
+		glm::mat4 worldToView = TrackBallCamera::getInstance()->getViewMatrix();  // JOJO ! C'est ici que je récupère la matrice de vue de la caméra, il suffit que le programme de détection la mette ici
 		glm::mat4 objectToWorld = glm::translate(glm::mat4(1.f), glm::vec3(0.f, -2.f, 0.f));
 		objectToWorld = glm::rotate(objectToWorld, 180.f, glm::vec3(0.f, 1.f, 0.f));
 
