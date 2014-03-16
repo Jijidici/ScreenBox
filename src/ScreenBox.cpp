@@ -16,6 +16,7 @@
 #include "assimp/Importer.hpp"
 #include "assimp/scene.h"
 #include "assimp/postprocess.h"
+#include "MouseHandling.h"
 
 #define POSITION_LOCATION 0
 #define NORMAL_LOCATION 1
@@ -24,7 +25,7 @@
 void ScreenBox::init() {
 	std::cout << "> INIT SCREENBOX" <<std::endl;
 
-	 _pWindow = NULL;
+	_pWindow = NULL;
 	_iW = 800;
 	_iH = 600;
 
@@ -42,8 +43,11 @@ void ScreenBox::init() {
         exit(EXIT_FAILURE);
     }
 
-	// Handle key events
+	// Handle events
 	glfwSetKeyCallback(_pWindow, ScreenBox::onKey);
+	glfwSetScrollCallback(_pWindow, ScreenBox::onScroll);
+	glfwSetCursorPosCallback(_pWindow, ScreenBox::onCursorPos);
+	glfwSetMouseButtonCallback(_pWindow, ScreenBox::onMouseButton);
 
 	// Use OpenGL context
 	glfwMakeContextCurrent(_pWindow);
@@ -58,7 +62,7 @@ void ScreenBox::init() {
 	// OpenGL configs
 	glClearColor(0.2f, 0.2f, 0.2f, 1.f);
 
-	// Init geometry
+	// Builds geometry
 	// QUAD
 	_iQuadTriangleCount = 2;
 	int quad_triangleList[] = {0, 1, 2, 2, 1, 3};
@@ -66,72 +70,6 @@ void ScreenBox::init() {
 	float quad_normals[] = { 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f };
 	float quad_uv[] = {0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 1.f, 1.f };
 
-	// SPACE MODEL
-	std::vector<int> space_triangleList;
-	std::vector<float> space_vertices;
-	std::vector<float> space_normals;
-	std::vector<float> space_uv;
-
-	// load model from file
-	_iSpaceTriangleCount = 0;
-	int iVerticesCount = 0;
-	Assimp::Importer importer;
-	const aiScene* pScene = importer.ReadFile("models/Voyager_1&2/Voyager_17.blend", aiProcess_Triangulate | aiProcess_FlipUVs);
-	for(unsigned int iMesh=0; iMesh<pScene->mNumMeshes; ++iMesh) {
-		const aiMesh* pMesh = pScene->mMeshes[iMesh];
-		int iPrevVerticesCount = space_vertices.size();
-
-		for(unsigned int iVert=0; iVert<pMesh->mNumVertices; ++iVert) {
-			aiVector3D pPos = pMesh->mVertices[iVert];
-			aiVector3D pNormal = pMesh->mNormals[iVert];
-			aiVector3D pTexCoord(0.f, 0.f, 0.f);
-			if(pMesh->HasTextureCoords(0)) {
-				pTexCoord = pMesh->mTextureCoords[0][iVert];
-			}
-
-			space_vertices.push_back(pPos.x); space_vertices.push_back(pPos.y); space_vertices.push_back(pPos.z); 
-			space_normals.push_back(pNormal.x); space_normals.push_back(pNormal.y); space_normals.push_back(pNormal.z); 
-			space_uv.push_back(pTexCoord.x); space_uv.push_back(pTexCoord.y);
-			++iVerticesCount;
-		}
-
-		for(unsigned int iFace=0; iFace<pMesh->mNumFaces; ++iFace) {
-			const aiFace& Face = pMesh->mFaces[iFace];
-			assert(Face.mNumIndices == 3);
-			space_triangleList.push_back(iPrevVerticesCount + Face.mIndices[0]);
-			space_triangleList.push_back(iPrevVerticesCount + Face.mIndices[1]);
-			space_triangleList.push_back(iPrevVerticesCount + Face.mIndices[2]);
-			++_iSpaceTriangleCount;
-		}
-	}
-	std::cout << "-> Space model loaded : " << _iSpaceTriangleCount << " faces, " << iVerticesCount << " vertices" << std::endl;
-
-	// Build vaos and vbos
-	// SPACE MODEL
-	glGenVertexArrays(1, &_spaceVAO);
-	glGenBuffers(4, _spaceVBOs);
-	
-	glBindVertexArray(_spaceVAO);
-	// Indexes
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _spaceVBOs[0]);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, space_triangleList.size()*sizeof(int), &(space_triangleList[0]), GL_STATIC_DRAW);
-    // Vertices
-    glBindBuffer(GL_ARRAY_BUFFER, _spaceVBOs[1]);
-    glEnableVertexAttribArray(POSITION_LOCATION);
-    glVertexAttribPointer(POSITION_LOCATION, 3, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT)*3, (void*)0);
-    glBufferData(GL_ARRAY_BUFFER, space_vertices.size()*sizeof(float), &(space_vertices[0]), GL_STATIC_DRAW);
-    // Normals
-    glBindBuffer(GL_ARRAY_BUFFER, _spaceVBOs[2]);
-    glEnableVertexAttribArray(NORMAL_LOCATION);
-    glVertexAttribPointer(NORMAL_LOCATION, 3, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT)*3, (void*)0);
-    glBufferData(GL_ARRAY_BUFFER, space_normals.size()*sizeof(float), &(space_normals[0]), GL_STATIC_DRAW);
-    // UVs
-    glBindBuffer(GL_ARRAY_BUFFER, _spaceVBOs[3]);
-	glEnableVertexAttribArray(TEXCOORD_LOCATION);
-    glVertexAttribPointer(TEXCOORD_LOCATION, 2, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT)*2, (void*)0);
-    glBufferData(GL_ARRAY_BUFFER, space_uv.size()*sizeof(float), &(space_uv[0]), GL_STATIC_DRAW);
-
-	// QUAD
 	glGenVertexArrays(1, &_quadVAO);
 	glGenBuffers(4,_quadVBOs);
 
@@ -155,6 +93,71 @@ void ScreenBox::init() {
     glVertexAttribPointer(TEXCOORD_LOCATION, 2, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT)*2, (void*)0);
     glBufferData(GL_ARRAY_BUFFER, sizeof(quad_uv), quad_uv, GL_STATIC_DRAW);
 
+	// SPACE MODEL
+	// load model from file
+	_iSpaceTriangleCount = 0;
+	int iVerticesCount = 0;
+	Assimp::Importer importer;
+	const aiScene* pScene = importer.ReadFile("models/kerrigan/Kerrigan_infested.obj", aiProcess_Triangulate | aiProcess_FlipUVs);
+	for(unsigned int iMesh=0; iMesh<pScene->mNumMeshes; ++iMesh) {
+		const aiMesh* pMesh = pScene->mMeshes[iMesh];
+		std::vector<int> space_triangleList;
+		std::vector<float> space_vertices;
+		std::vector<float> space_normals;
+		std::vector<float> space_uv;
+
+		for(unsigned int iVert=0; iVert<pMesh->mNumVertices; ++iVert) {
+			aiVector3D pPos = pMesh->mVertices[iVert];
+			aiVector3D pNormal = pMesh->mNormals[iVert];
+			aiVector3D pTexCoord(0.f, 0.f, 0.f);
+			if(pMesh->HasTextureCoords(0)) {
+				pTexCoord = pMesh->mTextureCoords[0][iVert];
+			}
+
+			space_vertices.push_back(pPos.x); space_vertices.push_back(pPos.y); space_vertices.push_back(pPos.z); 
+			space_normals.push_back(pNormal.x); space_normals.push_back(pNormal.y); space_normals.push_back(pNormal.z); 
+			space_uv.push_back(pTexCoord.x); space_uv.push_back(pTexCoord.y);
+			++iVerticesCount;
+		}
+
+		for(unsigned int iFace=0; iFace<pMesh->mNumFaces; ++iFace) {
+			const aiFace& Face = pMesh->mFaces[iFace];
+			assert(Face.mNumIndices == 3);
+			space_triangleList.push_back(Face.mIndices[0]);
+			space_triangleList.push_back(Face.mIndices[1]);
+			space_triangleList.push_back(Face.mIndices[2]);
+			++_iSpaceTriangleCount;
+		}
+
+		GLuint meshVAO;
+		std::vector<GLuint> meshVBOS(4);
+		glGenVertexArrays(1, &meshVAO);
+		glGenBuffers(4, &(meshVBOS[0]));
+	
+		glBindVertexArray(meshVAO);
+		// Indexes
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, meshVBOS[0]);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, space_triangleList.size()*sizeof(int), &(space_triangleList[0]), GL_STATIC_DRAW);
+		// Vertices
+		glBindBuffer(GL_ARRAY_BUFFER, meshVBOS[1]);
+		glEnableVertexAttribArray(POSITION_LOCATION);
+		glVertexAttribPointer(POSITION_LOCATION, 3, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT)*3, (void*)0);
+		glBufferData(GL_ARRAY_BUFFER, space_vertices.size()*sizeof(float), &(space_vertices[0]), GL_STATIC_DRAW);
+		// Normals
+		glBindBuffer(GL_ARRAY_BUFFER, meshVBOS[2]);
+		glEnableVertexAttribArray(NORMAL_LOCATION);
+		glVertexAttribPointer(NORMAL_LOCATION, 3, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT)*3, (void*)0);
+		glBufferData(GL_ARRAY_BUFFER, space_normals.size()*sizeof(float), &(space_normals[0]), GL_STATIC_DRAW);
+		// UVs
+		glBindBuffer(GL_ARRAY_BUFFER, meshVBOS[3]);
+		glEnableVertexAttribArray(TEXCOORD_LOCATION);
+		glVertexAttribPointer(TEXCOORD_LOCATION, 2, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT)*2, (void*)0);
+		glBufferData(GL_ARRAY_BUFFER, space_uv.size()*sizeof(float), &(space_uv[0]), GL_STATIC_DRAW);
+
+		_spaceVertexBuffers.insert(std::make_pair(meshVAO, meshVBOS));
+	}
+	std::cout << "-> Space model loaded : " << _iSpaceTriangleCount << " faces, " << iVerticesCount << " vertices" << std::endl;
+
 	// Build shaders
 	_pSM = new ShaderManager();
 	_pSM->addShader("basic", "shaders/basic.vs", "shaders/basic.fs");
@@ -166,6 +169,11 @@ void ScreenBox::init() {
 	// Build texture
 	_pTM = new TextureManager();
 	_pTM->generateNamedTexture("spaceTex", "models/Voyager_1&2/texture/tex_01_diff.png", 3);
+
+	// Camera manipulation data
+	MouseHandling::getInstance()->bLeftMousePressed = false;
+	MouseHandling::getInstance()->savedPosX = 0.;
+	MouseHandling::getInstance()->savedPosY = 0.;
 }
 
 void ScreenBox::launch() {
@@ -177,13 +185,14 @@ void ScreenBox::launch() {
 		/* *************************************************** *
 		 * ********* RENDER ZONE	
 		 * *************************************************** */
-		glClear(GL_COLOR_BUFFER_BIT);
+		glEnable(GL_DEPTH_TEST);
 		glViewport(0, 0, _iW, _iH);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// Compute space matrices
 		glm::mat4 worldToScreen = glm::perspective(60.f, static_cast<float>(_iW)/static_cast<float>(_iH), 0.1f, 100.f);
-		glm::mat4 worldToView = glm::lookAt(glm::vec3(0.f, 0.f, -10.f), glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f));
-		glm::mat4 objectToWorld = glm::mat4(1.f);
+		glm::mat4 worldToView = TrackBallCamera::getInstance()->getViewMatrix();
+		glm::mat4 objectToWorld = glm::translate(glm::mat4(1.f), glm::vec3(0.f, -2.f, 0.f));
 
 		//draw basic quad
 		glUseProgram(_pSM->getShader("basic"));
@@ -194,8 +203,10 @@ void ScreenBox::launch() {
 
 		_pTM->bindTexture("spaceTex", GL_TEXTURE0);
 
-		glBindVertexArray(_spaceVAO);
-		glDrawElementsInstanced(GL_TRIANGLES, _iSpaceTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
+		for(std::map<GLuint, std::vector<GLuint>>::iterator it=_spaceVertexBuffers.begin(); it!=_spaceVertexBuffers.end(); ++it) {
+			glBindVertexArray(it->first);
+			glDrawElementsInstanced(GL_TRIANGLES, _iSpaceTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
+		}
 
 		glfwSwapBuffers(_pWindow);
 
@@ -218,11 +229,14 @@ void ScreenBox::destroy() {
 	std::cout << "> DESTROY SCREENBOX" <<std::endl;
 
 	glDeleteVertexArrays(1, &_quadVAO);
-	glDeleteVertexArrays(1, &_spaceVAO);
 	glDeleteBuffers(4, _quadVBOs);
-	glDeleteBuffers(4, _spaceVBOs);
+	for(std::map<GLuint, std::vector<GLuint>>::iterator it=_spaceVertexBuffers.begin(); it!=_spaceVertexBuffers.end(); ++it) {
+		glDeleteVertexArrays(1, &(it->first));
+		glDeleteBuffers(4, &(it->second[0]));
+	}
 
 	delete _pSM;
+	delete _pTM;
 
 	glfwDestroyWindow(_pWindow);
 	glfwTerminate();
@@ -232,5 +246,39 @@ void ScreenBox::onKey(GLFWwindow* window, int key, int scancode, int action, int
 	//exit the app
 	if(key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
 		glfwSetWindowShouldClose(window, GL_TRUE);
+	}
+}
+
+void ScreenBox::onScroll(GLFWwindow* window, double xoffset, double yoffset) {
+	if(yoffset < 0) {
+		TrackBallCamera::getInstance()->moveFront(0.5f);
+	} else {
+		TrackBallCamera::getInstance()->moveFront(-0.5f);
+	}
+}
+
+void ScreenBox::onCursorPos(GLFWwindow* window, double xpos, double ypos) {
+	MouseHandling* pMouse = MouseHandling::getInstance();
+	if(pMouse->bLeftMousePressed) {
+		double horiMove = 0.5*(xpos-pMouse->savedPosX);
+		double vertMove = 0.5*(pMouse->savedPosY-ypos);
+
+		TrackBallCamera::getInstance()->rotateLeft(static_cast<float>(horiMove));
+		TrackBallCamera::getInstance()->rotateUp(static_cast<float>(vertMove));
+	}
+	pMouse->savedPosX = xpos;
+	pMouse->savedPosY = ypos;
+}
+
+void ScreenBox::onMouseButton(GLFWwindow* window, int button, int action, int mods) {
+	if(button == GLFW_MOUSE_BUTTON_1) {
+		MouseHandling* pMouse = MouseHandling::getInstance();
+			
+		if(action == GLFW_PRESS) {
+			pMouse->bLeftMousePressed = true;
+		} else if(action == GLFW_RELEASE) {
+			pMouse->bLeftMousePressed = false;
+		}
+
 	}
 }

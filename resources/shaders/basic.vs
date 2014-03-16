@@ -12,7 +12,7 @@ out vec3 vNormal;
 out vec2 vUV;
 
 void main() {
-	vNormal = normal;
+	vNormal = (uMatModel * vec4(normal, 0.)).xyz;
 	vUV = texcoords;
-	gl_Position = uMatProjection * uMatView * uMatModel * vec4(position, 1.f);
+	gl_Position = uMatProjection * uMatView * uMatModel * vec4(position, 1.);
 }

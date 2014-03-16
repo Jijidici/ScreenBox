@@ -8,6 +8,10 @@ uniform sampler2D uTexture1;
 out vec4 fragColor;
 
 void main() {
-	//fragColor = vec4(vUV, 0., 1.);
-	fragColor = texture(uTexture1, vUV);
+	vec3 l = normalize(vec3(0., -1., -1.));
+	float n_dot_l = dot(l, normalize(vNormal));
+
+	vec3 color = n_dot_l*vec3(vNormal);
+	
+	fragColor = vec4(color, 1.);
 }

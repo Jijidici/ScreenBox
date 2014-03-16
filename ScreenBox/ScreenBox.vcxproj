@@ -88,14 +88,18 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\src\main.cpp" />
+    <ClCompile Include="..\src\MouseHandling.cpp" />
     <ClCompile Include="..\src\ScreenBox.cpp" />
     <ClCompile Include="..\src\ShaderManager.cpp" />
     <ClCompile Include="..\src\TextureManager.cpp" />
+    <ClCompile Include="..\src\TrackBallCamera.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\MouseHandling.h" />
     <ClInclude Include="..\src\ScreenBox.h" />
     <ClInclude Include="..\src\ShaderManager.h" />
     <ClInclude Include="..\src\TextureManager.h" />
+    <ClInclude Include="..\src\TrackBallCamera.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
