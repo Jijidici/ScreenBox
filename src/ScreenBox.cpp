@@ -168,7 +168,10 @@ void ScreenBox::init() {
 
 	// Build texture
 	_pTM = new TextureManager();
-	_pTM->generateNamedTexture("spaceTex", "models/Voyager_1&2/texture/tex_01_diff.png", 3);
+	_pTM->generateNamedTexture("eye_diff", "models/kerrigan/Kerrigan_inf_eye_D.tga", 3);
+	_pTM->generateNamedTexture("head_diff", "models/kerrigan/Kerrigan_inf_head_D.tga", 3);
+	_pTM->generateNamedTexture("legswings_diff", "models/kerrigan/Kerrigan_inf_legswings_D.tga", 3);
+	_pTM->generateNamedTexture("torso_diff", "models/kerrigan/Kerrigan_inf_torso_D.tga", 3);
 
 	// Camera manipulation data
 	MouseHandling::getInstance()->bLeftMousePressed = false;
@@ -193,6 +196,7 @@ void ScreenBox::launch() {
 		glm::mat4 worldToScreen = glm::perspective(60.f, static_cast<float>(_iW)/static_cast<float>(_iH), 0.1f, 100.f);
 		glm::mat4 worldToView = TrackBallCamera::getInstance()->getViewMatrix();
 		glm::mat4 objectToWorld = glm::translate(glm::mat4(1.f), glm::vec3(0.f, -2.f, 0.f));
+		objectToWorld = glm::rotate(objectToWorld, 180.f, glm::vec3(0.f, 1.f, 0.f));
 
 		//draw basic quad
 		glUseProgram(_pSM->getShader("basic"));
@@ -201,9 +205,16 @@ void ScreenBox::launch() {
 		glUniformMatrix4fv(_pSM->getUniformLocation("uMatModel"), 1, GL_FALSE, glm::value_ptr(objectToWorld));
 		glUniform1i(_pSM->getUniformLocation("uTexture1"), 0);
 
-		_pTM->bindTexture("spaceTex", GL_TEXTURE0);
+		std::vector<std::string> kerriganTexNames;
+		kerriganTexNames.push_back("eye_diff");
+		kerriganTexNames.push_back("legswings_diff");
+		kerriganTexNames.push_back("head_diff");
+		kerriganTexNames.push_back("torso_diff");
 
+		int iNameCursor = 0;
 		for(std::map<GLuint, std::vector<GLuint>>::iterator it=_spaceVertexBuffers.begin(); it!=_spaceVertexBuffers.end(); ++it) {
+			_pTM->bindTexture(kerriganTexNames[iNameCursor++], GL_TEXTURE0);
+
 			glBindVertexArray(it->first);
 			glDrawElementsInstanced(GL_TRIANGLES, _iSpaceTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
 		}
