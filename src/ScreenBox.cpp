@@ -164,14 +164,20 @@ void ScreenBox::init() {
 	_pSM->addUniformLocation("basic", "uMatProjection");
 	_pSM->addUniformLocation("basic", "uMatView");
 	_pSM->addUniformLocation("basic", "uMatModel");
-	_pSM->addUniformLocation("basic", "uTexture1");
+	_pSM->addUniformLocation("basic", "uCameraPosition");
+	_pSM->addUniformLocation("basic", "uDiffuse");
+	_pSM->addUniformLocation("basic", "uSpec");
 
 	// Build texture
 	_pTM = new TextureManager();
 	_pTM->generateNamedTexture("eye_diff", "models/kerrigan/Kerrigan_inf_eye_D.tga", 3);
+	_pTM->generateNamedTexture("eye_spec", "models/kerrigan/Kerrigan_inf_eye_S.tga", 3);
 	_pTM->generateNamedTexture("head_diff", "models/kerrigan/Kerrigan_inf_head_D.tga", 3);
+	_pTM->generateNamedTexture("head_spec", "models/kerrigan/Kerrigan_inf_head_S.tga", 3);
 	_pTM->generateNamedTexture("legswings_diff", "models/kerrigan/Kerrigan_inf_legswings_D.tga", 3);
+	_pTM->generateNamedTexture("legswings_spec", "models/kerrigan/Kerrigan_inf_legswings_S.tga", 3);
 	_pTM->generateNamedTexture("torso_diff", "models/kerrigan/Kerrigan_inf_torso_D.tga", 3);
+	_pTM->generateNamedTexture("torso_spec", "models/kerrigan/Kerrigan_inf_torso_S.tga", 3);
 
 	// Camera manipulation data
 	MouseHandling::getInstance()->bLeftMousePressed = false;
@@ -203,17 +209,24 @@ void ScreenBox::launch() {
 		glUniformMatrix4fv(_pSM->getUniformLocation("uMatProjection"), 1, GL_FALSE, glm::value_ptr(worldToScreen));
 		glUniformMatrix4fv(_pSM->getUniformLocation("uMatView"), 1, GL_FALSE, glm::value_ptr(worldToView));
 		glUniformMatrix4fv(_pSM->getUniformLocation("uMatModel"), 1, GL_FALSE, glm::value_ptr(objectToWorld));
-		glUniform1i(_pSM->getUniformLocation("uTexture1"), 0);
+		glUniform3fv(_pSM->getUniformLocation("uCameraPosition"), 1, glm::value_ptr(TrackBallCamera::getInstance()->getCameraPosition()));
+		glUniform1i(_pSM->getUniformLocation("uDiffuse"), 0);
+		glUniform1i(_pSM->getUniformLocation("uSpec"), 1);
 
 		std::vector<std::string> kerriganTexNames;
 		kerriganTexNames.push_back("eye_diff");
+		kerriganTexNames.push_back("eye_spec");
 		kerriganTexNames.push_back("legswings_diff");
+		kerriganTexNames.push_back("legswings_spec");
 		kerriganTexNames.push_back("head_diff");
+		kerriganTexNames.push_back("head_spec");
 		kerriganTexNames.push_back("torso_diff");
+		kerriganTexNames.push_back("torso_spec");
 
 		int iNameCursor = 0;
 		for(std::map<GLuint, std::vector<GLuint>>::iterator it=_spaceVertexBuffers.begin(); it!=_spaceVertexBuffers.end(); ++it) {
 			_pTM->bindTexture(kerriganTexNames[iNameCursor++], GL_TEXTURE0);
+			_pTM->bindTexture(kerriganTexNames[iNameCursor++], GL_TEXTURE1);
 
 			glBindVertexArray(it->first);
 			glDrawElementsInstanced(GL_TRIANGLES, _iSpaceTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);

@@ -8,10 +8,12 @@ uniform mat4 uMatProjection;
 uniform mat4 uMatView;
 uniform mat4 uMatModel;
 
+out vec3 vPosition;
 out vec3 vNormal;
 out vec2 vUV;
 
 void main() {
+	vPosition = (uMatModel * vec4(vPosition, 0.)).xyz;
 	vNormal = (uMatModel * vec4(normal, 0.)).xyz;
 	vUV = texcoords;
 	gl_Position = uMatProjection * uMatView * uMatModel * vec4(position, 1.);
