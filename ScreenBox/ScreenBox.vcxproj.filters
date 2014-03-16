@@ -12,9 +12,15 @@
     <ClCompile Include="..\src\ScreenBox.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\ShaderManager.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\ScreenBox.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ShaderManager.h">
       <Filter>src</Filter>
     </ClInclude>
   </ItemGroup>

@@ -9,6 +9,7 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include "ShaderManager.h"
 
 #define POSITION_LOCATION 0
 #define NORMAL_LOCATION 1
@@ -81,6 +82,9 @@ void ScreenBox::init() {
 	glEnableVertexAttribArray(TEXCOORD_LOCATION);
     glVertexAttribPointer(TEXCOORD_LOCATION, 2, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT)*2, (void*)0);
     glBufferData(GL_ARRAY_BUFFER, sizeof(quad_uv), quad_uv, GL_STATIC_DRAW);
+
+	// Build shaders
+	GLuint basicShader = ShaderManager::getInstance()->addShader("basic", "shaders/basic.vs", "shaders/basic.fs");
 }
 
 void ScreenBox::launch() {
@@ -94,6 +98,9 @@ void ScreenBox::launch() {
 		 * *************************************************** */
 		glClear(GL_COLOR_BUFFER_BIT);
 		glViewport(0, 0, _iW, _iH);
+
+		GLuint basicShader = ShaderManager::getInstance()->getShader("basic");
+		glUseProgram(basicShader);
 
 		glBindVertexArray(_quadVAO);
 		glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);

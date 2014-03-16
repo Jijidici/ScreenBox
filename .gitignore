@@ -217,11 +217,4 @@ pip-log.txt
 #############
 ## Synth
 #############
-
-proj.android/
-proj.win32/Release.win32
-proj.win32/Debug.win32
-proj.ios_mac/*
-PREC_*
-.svn/
-Resources/*
+resources/models/
