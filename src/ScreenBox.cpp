@@ -91,6 +91,11 @@ void ScreenBox::init() {
 	_pSM->addUniformLocation("basic", "uMatProjection");
 	_pSM->addUniformLocation("basic", "uMatView");
 	_pSM->addUniformLocation("basic", "uMatModel");
+	_pSM->addUniformLocation("basic", "uTexture1");
+
+	// Build texture
+	_pTM = new TextureManager();
+	_pTM->generateNamedTexture("texTest", "models/voyager/texures/voyagerwashboard.png", 4);
 }
 
 void ScreenBox::launch() {
@@ -115,6 +120,10 @@ void ScreenBox::launch() {
 		glUniformMatrix4fv(_pSM->getUniformLocation("uMatProjection"), 1, GL_FALSE, glm::value_ptr(worldToScreen));
 		glUniformMatrix4fv(_pSM->getUniformLocation("uMatView"), 1, GL_FALSE, glm::value_ptr(worldToView));
 		glUniformMatrix4fv(_pSM->getUniformLocation("uMatModel"), 1, GL_FALSE, glm::value_ptr(objectToWorld));
+		glUniform1i(_pSM->getUniformLocation("uTexture1"), 0);
+
+		_pTM->bindTexture("texTest", GL_TEXTURE0);
+
 		glBindVertexArray(_quadVAO);
 		glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
 

@@ -8,6 +8,7 @@
 #include "GL/glew.h"
 #include "glfw3.h"
 #include "ShaderManager.h"
+#include "TextureManager.h"
 
 class ScreenBox {
 public:
@@ -30,6 +31,7 @@ private:
 	GLuint _quadVAO;
 
 	ShaderManager* _pSM;
+	TextureManager* _pTM;
 };
 
 #endif //__SCREEN_BOX_H__
