@@ -9,6 +9,9 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include "glm/glm.hpp"
+#include "glm/gtc/matrix_transform.hpp"
+#include "glm/gtc/type_ptr.hpp"
 #include "ShaderManager.h"
 
 #define POSITION_LOCATION 0
@@ -84,11 +87,16 @@ void ScreenBox::init() {
     glBufferData(GL_ARRAY_BUFFER, sizeof(quad_uv), quad_uv, GL_STATIC_DRAW);
 
 	// Build shaders
-	GLuint basicShader = ShaderManager::getInstance()->addShader("basic", "shaders/basic.vs", "shaders/basic.fs");
+	ShaderManager* pSM = ShaderManager::getInstance();
+	pSM->addShader("basic", "shaders/basic.vs", "shaders/basic.fs");
+	pSM->addUniformLocation("basic", "uMatProjection");
+	pSM->addUniformLocation("basic", "uMatView");
+	pSM->addUniformLocation("basic", "uMatModel");
 }
 
 void ScreenBox::launch() {
 	std::cout << "> LAUNCH SCREENBOX" <<std::endl;
+	ShaderManager* pSM = ShaderManager::getInstance();
 
 	while(!glfwWindowShouldClose(_pWindow)) {
 		_dTime = glfwGetTime();
@@ -99,9 +107,16 @@ void ScreenBox::launch() {
 		glClear(GL_COLOR_BUFFER_BIT);
 		glViewport(0, 0, _iW, _iH);
 
-		GLuint basicShader = ShaderManager::getInstance()->getShader("basic");
-		glUseProgram(basicShader);
+		// Compute space matrices
+		glm::mat4 worldToScreen = glm::perspective(60.f, static_cast<float>(_iW)/static_cast<float>(_iH), 0.1f, 100.f);
+		glm::mat4 worldToView = glm::lookAt(glm::vec3(0.f, 0.f, -5.f), glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f));
+		glm::mat4 objectToWorld = glm::rotate(glm::mat4(1.f), 45.f, glm::vec3(0.f, 1.f, 0.f));
 
+		//draw basic quad
+		glUseProgram(pSM->getShader("basic"));
+		glUniformMatrix4fv(pSM->getUniformLocation("uMatProjection"), 1, GL_FALSE, glm::value_ptr(worldToScreen));
+		glUniformMatrix4fv(pSM->getUniformLocation("uMatView"), 1, GL_FALSE, glm::value_ptr(worldToView));
+		glUniformMatrix4fv(pSM->getUniformLocation("uMatModel"), 1, GL_FALSE, glm::value_ptr(objectToWorld));
 		glBindVertexArray(_quadVAO);
 		glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
 

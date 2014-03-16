@@ -12,8 +12,13 @@ class ShaderManager {
 public:
 	~ShaderManager();
 	static ShaderManager* getInstance();
-	GLuint addShader(std::string sTag, const char* sVSPath, const char* sFSPath);
+
+	void addShader(std::string sTag, const char* sVSPath, const char* sFSPath);
 	GLuint getShader(std::string sTag);
+
+	void addUniformLocation(std::string sShaderTag, std::string sUniformName);
+	GLuint getUniformLocation(std::string sUniformName);
+
 
 private:
 	ShaderManager();
@@ -22,6 +27,7 @@ private:
 
 	static ShaderManager* _pInstance;
 	std::map<std::string, GLuint> _shaderMap;
+	std::map<std::string, GLuint> _locationMap;
 };
 
 #endif //__SHADER_MANAGER_H__

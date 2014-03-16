@@ -20,6 +20,7 @@ ShaderManager::~ShaderManager() {
 	}
 
 	_shaderMap.clear();
+	_locationMap.clear();
 }
 
 ShaderManager* ShaderManager::getInstance() {
@@ -29,15 +30,26 @@ ShaderManager* ShaderManager::getInstance() {
 	return _pInstance;
 }
 
-GLuint ShaderManager::addShader(std::string sTag, const char* sVSPath, const char* sFSPath) {
+void ShaderManager::addShader(std::string sTag, const char* sVSPath, const char* sFSPath) {
 	GLuint newProgramID = loadProgram(sVSPath, sFSPath);
 	_shaderMap.insert(std::make_pair(sTag, newProgramID));
-	return newProgramID;
 }
 
 GLuint ShaderManager::getShader(std::string sTag) {
 	std::map<std::string, GLuint>::iterator it = _shaderMap.find(sTag);
 	assert(it != _shaderMap.end());
+	return it->second;
+}
+
+void ShaderManager::addUniformLocation(std::string sShaderTag, std::string sUniformName) {
+	GLuint shader = getShader(sShaderTag);
+	GLuint location = glGetUniformLocation(shader, sUniformName.c_str());
+	_locationMap.insert(std::make_pair(sUniformName, location));
+}
+
+GLuint ShaderManager::getUniformLocation(std::string sUniformName) {
+	std::map<std::string, GLuint>::iterator it = _locationMap.find(sUniformName);
+	assert(it != _locationMap.end());
 	return it->second;
 }
 
