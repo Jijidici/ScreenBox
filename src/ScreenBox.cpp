@@ -9,9 +9,13 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <vector>
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/type_ptr.hpp"
+#include "assimp/Importer.hpp"
+#include "assimp/scene.h"
+#include "assimp/postprocess.h"
 
 #define POSITION_LOCATION 0
 #define NORMAL_LOCATION 1
@@ -55,13 +59,79 @@ void ScreenBox::init() {
 	glClearColor(0.2f, 0.2f, 0.2f, 1.f);
 
 	// Init geometry
+	// QUAD
 	_iQuadTriangleCount = 2;
 	int quad_triangleList[] = {0, 1, 2, 2, 1, 3};
 	float quad_vertices[] = { -0.5f, 0.5f, 0.f, 0.5f, 0.5f, 0.f, -0.5f, -0.5f, 0.f, 0.5f, -0.5f, 0.f };
 	float quad_normals[] = { 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f };
 	float quad_uv[] = {0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 1.f, 1.f };
 
+	// SPACE MODEL
+	std::vector<int> space_triangleList;
+	std::vector<float> space_vertices;
+	std::vector<float> space_normals;
+	std::vector<float> space_uv;
+
+	// load model from file
+	_iSpaceTriangleCount = 0;
+	int iVerticesCount = 0;
+	Assimp::Importer importer;
+	const aiScene* pScene = importer.ReadFile("models/voyager/voyager_carbajal.3ds", aiProcess_Triangulate | aiProcess_GenSmoothNormals);
+	for(unsigned int iMesh=0; iMesh<pScene->mNumMeshes; ++iMesh) {
+		const aiMesh* pMesh = pScene->mMeshes[iMesh];
+		int iPrevVerticesCount = space_vertices.size();
+
+		for(unsigned int iVert=0; iVert<pMesh->mNumVertices; ++iVert) {
+			aiVector3D pPos = pMesh->mVertices[iVert];
+			aiVector3D pNormal = pMesh->mNormals[iVert];
+			aiVector3D pTexCoord(0.f, 0.f, 0.f);
+			if(pMesh->HasTextureCoords(0)) {
+				pTexCoord = pMesh->mTextureCoords[0][iVert];
+			}
+
+			space_vertices.push_back(pPos.x); space_vertices.push_back(pPos.y); space_vertices.push_back(pPos.z); 
+			space_normals.push_back(pNormal.x); space_normals.push_back(pNormal.y); space_normals.push_back(pNormal.z); 
+			space_uv.push_back(pTexCoord.x); space_uv.push_back(pTexCoord.y);
+			++iVerticesCount;
+		}
+
+		for(unsigned int iFace=0; iFace<pMesh->mNumFaces; ++iFace) {
+			const aiFace& Face = pMesh->mFaces[iFace];
+			assert(Face.mNumIndices == 3);
+			space_triangleList.push_back(iPrevVerticesCount + Face.mIndices[0]);
+			space_triangleList.push_back(iPrevVerticesCount + Face.mIndices[1]);
+			space_triangleList.push_back(iPrevVerticesCount + Face.mIndices[2]);
+			++_iSpaceTriangleCount;
+		}
+	}
+	std::cout << "-> Space model loaded : " << _iSpaceTriangleCount << " faces, " << iVerticesCount << " vertices" << std::endl;
+
 	// Build vaos and vbos
+	// SPACE MODEL
+	glGenVertexArrays(1, &_spaceVAO);
+	glGenBuffers(4, _spaceVBOs);
+	
+	glBindVertexArray(_spaceVAO);
+	// Indexes
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _spaceVBOs[0]);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, space_triangleList.size()*sizeof(int), &(space_triangleList[0]), GL_STATIC_DRAW);
+    // Vertices
+    glBindBuffer(GL_ARRAY_BUFFER, _spaceVBOs[1]);
+    glEnableVertexAttribArray(POSITION_LOCATION);
+    glVertexAttribPointer(POSITION_LOCATION, 3, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT)*3, (void*)0);
+    glBufferData(GL_ARRAY_BUFFER, space_vertices.size()*sizeof(float), &(space_vertices[0]), GL_STATIC_DRAW);
+    // Normals
+    glBindBuffer(GL_ARRAY_BUFFER, _spaceVBOs[2]);
+    glEnableVertexAttribArray(NORMAL_LOCATION);
+    glVertexAttribPointer(NORMAL_LOCATION, 3, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT)*3, (void*)0);
+    glBufferData(GL_ARRAY_BUFFER, space_normals.size()*sizeof(float), &(space_normals[0]), GL_STATIC_DRAW);
+    // UVs
+    glBindBuffer(GL_ARRAY_BUFFER, _spaceVBOs[3]);
+	glEnableVertexAttribArray(TEXCOORD_LOCATION);
+    glVertexAttribPointer(TEXCOORD_LOCATION, 2, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT)*2, (void*)0);
+    glBufferData(GL_ARRAY_BUFFER, space_uv.size()*sizeof(float), &(space_uv[0]), GL_STATIC_DRAW);
+
+	// QUAD
 	glGenVertexArrays(1, &_quadVAO);
 	glGenBuffers(4,_quadVBOs);
 
@@ -112,8 +182,8 @@ void ScreenBox::launch() {
 
 		// Compute space matrices
 		glm::mat4 worldToScreen = glm::perspective(60.f, static_cast<float>(_iW)/static_cast<float>(_iH), 0.1f, 100.f);
-		glm::mat4 worldToView = glm::lookAt(glm::vec3(0.f, 0.f, -5.f), glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f));
-		glm::mat4 objectToWorld = glm::rotate(glm::mat4(1.f), 45.f, glm::vec3(0.f, 1.f, 0.f));
+		glm::mat4 worldToView = glm::lookAt(glm::vec3(0.f, 0.f, -10.f), glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f));
+		glm::mat4 objectToWorld = glm::mat4(1.f);
 
 		//draw basic quad
 		glUseProgram(_pSM->getShader("basic"));
@@ -124,8 +194,8 @@ void ScreenBox::launch() {
 
 		_pTM->bindTexture("texTest", GL_TEXTURE0);
 
-		glBindVertexArray(_quadVAO);
-		glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
+		glBindVertexArray(_spaceVAO);
+		glDrawElementsInstanced(GL_TRIANGLES, _iSpaceTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
 
 		glfwSwapBuffers(_pWindow);
 
@@ -148,7 +218,9 @@ void ScreenBox::destroy() {
 	std::cout << "> DESTROY SCREENBOX" <<std::endl;
 
 	glDeleteVertexArrays(1, &_quadVAO);
+	glDeleteVertexArrays(1, &_spaceVAO);
 	glDeleteBuffers(4, _quadVBOs);
+	glDeleteBuffers(4, _spaceVBOs);
 
 	delete _pSM;
 

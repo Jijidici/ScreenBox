@@ -27,8 +27,12 @@ private:
 	float _fFPS;
 
 	int _iQuadTriangleCount;
+	int _iSpaceTriangleCount;
 	GLuint _quadVBOs[4];
+	GLuint _spaceVBOs[4];
 	GLuint _quadVAO;
+	GLuint _spaceVAO;
+	
 
 	ShaderManager* _pSM;
 	TextureManager* _pTM;
