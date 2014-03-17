@@ -221,7 +221,6 @@ void ScreenBox::init() {
 	_pSM->addUniformLocation("normalmap", "uMatProjection");
 	_pSM->addUniformLocation("normalmap", "uMatView");
 	_pSM->addUniformLocation("normalmap", "uMatModel");
-	_pSM->addUniformLocation("normalmap", "uCameraPosition");
 	_pSM->addUniformLocation("normalmap", "uDiffuse");
 	_pSM->addUniformLocation("normalmap", "uSpec");
 	_pSM->addUniformLocation("normalmap", "uNormalMap");
@@ -229,6 +228,18 @@ void ScreenBox::init() {
 
 	_pSM->addShader("blit", "shaders/blit.vs", "shaders/blit.fs");
 	_pSM->addUniformLocation("blit", "uTexture1");
+
+	_pSM->addShader("deferred", "shaders/blit.vs", "shaders/deferred.fs");
+	_pSM->addUniformLocation("deferred", "uMaterial");
+	_pSM->addUniformLocation("deferred", "uNormal");
+	_pSM->addUniformLocation("deferred", "uDepth");
+	_pSM->addUniformLocation("deferred", "uCameraPosition");
+	_pSM->addUniformLocation("deferred", "uLightPosition");
+	_pSM->addUniformLocation("deferred", "uLightTarget");
+	_pSM->addUniformLocation("deferred", "uLightColor");
+	_pSM->addUniformLocation("deferred", "uLightIntensity");
+	_pSM->addUniformLocation("deferred", "uLightLength");
+	_pSM->addUniformLocation("deferred", "uInverseViewProjection");
 
 	// Build FBOs
 	_pTM = new TextureManager();
@@ -301,7 +312,6 @@ void ScreenBox::launch() {
 		glUniformMatrix4fv(_pSM->getUniformLocation("uMatProjection"), 1, GL_FALSE, glm::value_ptr(worldToScreen));
 		glUniformMatrix4fv(_pSM->getUniformLocation("uMatView"), 1, GL_FALSE, glm::value_ptr(worldToView));
 		glUniformMatrix4fv(_pSM->getUniformLocation("uMatModel"), 1, GL_FALSE, glm::value_ptr(objectToWorld));
-		glUniform3fv(_pSM->getUniformLocation("uCameraPosition"), 1, glm::value_ptr(TrackBallCamera::getInstance()->getCameraPosition()));
 		glUniform1i(_pSM->getUniformLocation("uDiffuse"), 0);
 		glUniform1i(_pSM->getUniformLocation("uSpec"), 1);
 		glUniform1i(_pSM->getUniformLocation("uNormalMap"), 2);
@@ -350,9 +360,24 @@ void ScreenBox::launch() {
 		glViewport(0, 0, _iW, _iH);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		glUseProgram(_pSM->getShader("blit"));
-		glUniform1i(_pSM->getUniformLocation("uTexture1"), 0);
+		glm::mat4 screenToWorld = glm::transpose(glm::inverse(worldToScreen * worldToView));
+
+		glUseProgram(_pSM->getShader("deferred"));
+		glUniform1i(_pSM->getUniformLocation("uMaterial"), 0);
+		glUniform1i(_pSM->getUniformLocation("uNormal"), 1);
+		glUniform1i(_pSM->getUniformLocation("uDepth"), 2);
+		glUniform3fv(_pSM->getUniformLocation("uCameraPosition"), 1, glm::value_ptr(TrackBallCamera::getInstance()->getCameraPosition()));
+		glUniformMatrix4fv(_pSM->getUniformLocation("uInverseViewProjection"), 1, GL_FALSE, glm::value_ptr(screenToWorld));
+		glUniform3fv(_pSM->getUniformLocation("uLightPosition"), 1, glm::value_ptr(glm::vec3(0.f, 4.f, -3.f)));
+		glUniform3fv(_pSM->getUniformLocation("uLightTarget"), 1, glm::value_ptr(glm::vec3(0.f, 0.f, 1.f)));
+		glUniform3fv(_pSM->getUniformLocation("uLightColor"), 1, glm::value_ptr(glm::vec3(1.f, 1.f, 1.f)));
+		glUniform1f(_pSM->getUniformLocation("uLightIntensity"), 2.f);
+		glUniform1f(_pSM->getUniformLocation("uLightLength"), 20.f);
+
 		_pTM->bindTexture(0, GL_TEXTURE0);
+		_pTM->bindTexture(1, GL_TEXTURE1);
+		_pTM->bindTexture(2, GL_TEXTURE2);
+
 		glBindVertexArray(_quadVAO);
 		glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
 
