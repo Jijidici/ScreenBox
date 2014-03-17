@@ -62,7 +62,7 @@ void ScreenBox::init() {
     }
 
 	// OpenGL configs
-	glClearColor(0.2f, 0.2f, 0.2f, 1.f);
+	glClearColor(0.f, 0.f, 0.f, 1.f);
 
 	// Builds geometry
 	// QUAD
@@ -71,9 +71,11 @@ void ScreenBox::init() {
 	float quad_vertices[] = { -0.5f, 0.5f, 0.f, 0.5f, 0.5f, 0.f, -0.5f, -0.5f, 0.f, 0.5f, -0.5f, 0.f };
 	float quad_normals[] = { 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f };
 	float quad_uv[] = {0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 1.f, 1.f };
+	float quad_tangents[] = { 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f };
+	float quad_bitangents[] = { 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f };
 
 	glGenVertexArrays(1, &_quadVAO);
-	glGenBuffers(4,_quadVBOs);
+	glGenBuffers(6,_quadVBOs);
 
 	glBindVertexArray(_quadVAO);
 	// Indexes
@@ -94,6 +96,17 @@ void ScreenBox::init() {
 	glEnableVertexAttribArray(TEXCOORD_LOCATION);
     glVertexAttribPointer(TEXCOORD_LOCATION, 2, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT)*2, (void*)0);
     glBufferData(GL_ARRAY_BUFFER, sizeof(quad_uv), quad_uv, GL_STATIC_DRAW);
+	// Tangents
+	glBindBuffer(GL_ARRAY_BUFFER, _quadVBOs[4]);
+	glEnableVertexAttribArray(TANGENT_LOCATION);
+    glVertexAttribPointer(TANGENT_LOCATION, 3, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT)*3, (void*)0);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quad_tangents), quad_tangents, GL_STATIC_DRAW);
+	// Bitangents
+	glBindBuffer(GL_ARRAY_BUFFER, _quadVBOs[5]);
+	glEnableVertexAttribArray(BITANGENT_LOCATION);
+    glVertexAttribPointer(BITANGENT_LOCATION, 3, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT)*3, (void*)0);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quad_bitangents), quad_bitangents, GL_STATIC_DRAW);
+
 
 	// SPACE MODEL
 	// load model from file
@@ -212,6 +225,7 @@ void ScreenBox::init() {
 	_pSM->addUniformLocation("normalmap", "uDiffuse");
 	_pSM->addUniformLocation("normalmap", "uSpec");
 	_pSM->addUniformLocation("normalmap", "uNormalMap");
+	_pSM->addUniformLocation("normalmap", "uIsGround");
 
 	// Build texture
 	_pTM = new TextureManager();
@@ -227,6 +241,9 @@ void ScreenBox::init() {
 	_pTM->generateNamedTexture("torso_diff", "models/kerrigan/Kerrigan_inf_torso_D.tga", 3);
 	_pTM->generateNamedTexture("torso_spec", "models/kerrigan/Kerrigan_inf_torso_S.tga", 3);
 	_pTM->generateNamedTexture("torso_norm", "models/kerrigan/Kerrigan_inf_torso_N.tga", 3);
+	_pTM->generateNamedTexture("ground_diff", "models/ground/metal_plate_D.jpg", 3);
+	_pTM->generateNamedTexture("ground_spec", "models/ground/metal_plate_S.jpg", 3);
+	_pTM->generateNamedTexture("ground_norm", "models/ground/metal_plate_N.jpg", 3);
 
 	// Camera manipulation data
 	MouseHandling::getInstance()->bLeftMousePressed = false;
@@ -253,7 +270,7 @@ void ScreenBox::launch() {
 		glm::mat4 objectToWorld = glm::translate(glm::mat4(1.f), glm::vec3(0.f, -2.f, 0.f));
 		objectToWorld = glm::rotate(objectToWorld, 180.f, glm::vec3(0.f, 1.f, 0.f));
 
-		//draw basic quad
+		// Draw space model
 		glUseProgram(_pSM->getShader("normalmap"));
 		glUniformMatrix4fv(_pSM->getUniformLocation("uMatProjection"), 1, GL_FALSE, glm::value_ptr(worldToScreen));
 		glUniformMatrix4fv(_pSM->getUniformLocation("uMatView"), 1, GL_FALSE, glm::value_ptr(worldToView));
@@ -262,6 +279,7 @@ void ScreenBox::launch() {
 		glUniform1i(_pSM->getUniformLocation("uDiffuse"), 0);
 		glUniform1i(_pSM->getUniformLocation("uSpec"), 1);
 		glUniform1i(_pSM->getUniformLocation("uNormalMap"), 2);
+		glUniform1i(_pSM->getUniformLocation("uIsGround"), 0);
 
 		std::vector<std::string> kerriganTexNames;
 		kerriganTexNames.push_back("eye_diff");
@@ -287,6 +305,20 @@ void ScreenBox::launch() {
 			glDrawElementsInstanced(GL_TRIANGLES, _iSpaceTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
 		}
 
+		// Draw the ground quad
+		objectToWorld = glm::translate(glm::mat4(1.f), glm::vec3(0.f, -2.f, 0.f));
+		objectToWorld = glm::rotate(objectToWorld, 90.f, glm::vec3(1.f, 0.f, 0.f));
+		objectToWorld = glm::scale(objectToWorld, glm::vec3(100.f, 100.f, 1.f));
+		glUniformMatrix4fv(_pSM->getUniformLocation("uMatModel"), 1, GL_FALSE, glm::value_ptr(objectToWorld));
+		glUniform1i(_pSM->getUniformLocation("uIsGround"), 1);
+
+		_pTM->bindTexture("ground_diff", GL_TEXTURE0);
+		_pTM->bindTexture("ground_spec", GL_TEXTURE1);
+		_pTM->bindTexture("ground_norm", GL_TEXTURE2);
+
+		glBindVertexArray(_quadVAO);
+		glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
+
 		glfwSwapBuffers(_pWindow);
 
 		/* *************************************************** *
@@ -308,7 +340,7 @@ void ScreenBox::destroy() {
 	std::cout << "> DESTROY SCREENBOX" <<std::endl;
 
 	glDeleteVertexArrays(1, &_quadVAO);
-	glDeleteBuffers(4, _quadVBOs);
+	glDeleteBuffers(6, _quadVBOs);
 	for(std::map<GLuint, std::vector<GLuint>>::iterator it=_spaceVertexBuffers.begin(); it!=_spaceVertexBuffers.end(); ++it) {
 		glDeleteVertexArrays(1, &(it->first));
 		glDeleteBuffers(6, &(it->second[0]));

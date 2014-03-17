@@ -9,6 +9,7 @@ layout(location = 4) in vec3 bitangent;
 uniform mat4 uMatProjection;
 uniform mat4 uMatView;
 uniform mat4 uMatModel;
+uniform int uIsGround;
 
 out vec3 vPosition;
 out vec3 vNormal;
@@ -17,10 +18,14 @@ out vec3 vTangent;
 out vec3 vBitangent;
 
 void main() {
-	vPosition = (uMatModel * vec4(vPosition, 0.)).xyz;
+	vPosition = (uMatModel * vec4(position, 0.)).xyz;
 	vNormal = (uMatModel * vec4(normal, 0.)).xyz;
 	vUV = texcoords;
 	vTangent = (uMatModel * vec4(tangent, 0.)).xyz;
 	vBitangent = (uMatModel * vec4(bitangent, 0.)).xyz;
 	gl_Position = uMatProjection * uMatView * uMatModel * vec4(position, 1.);
+	
+	if(uIsGround == 1) {
+		vUV *= 50.;
+	}
 }

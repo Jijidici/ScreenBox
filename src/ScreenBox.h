@@ -33,7 +33,7 @@ private:
 
 	int _iQuadTriangleCount;
 	int _iSpaceTriangleCount;
-	GLuint _quadVBOs[4];
+	GLuint _quadVBOs[6];
 	GLuint _quadVAO;
 	std::map<GLuint, std::vector<GLuint>> _spaceVertexBuffers;
 	
