@@ -21,6 +21,8 @@
 #define POSITION_LOCATION 0
 #define NORMAL_LOCATION 1
 #define TEXCOORD_LOCATION 2
+#define TANGENT_LOCATION 3
+#define BITANGENT_LOCATION 4
 
 void ScreenBox::init() {
 	std::cout << "> INIT SCREENBOX" <<std::endl;
@@ -120,19 +122,51 @@ void ScreenBox::init() {
 			++iVerticesCount;
 		}
 
+		std::vector<float> space_tangents(space_vertices.size(), 0.f);
+		std::vector<float> space_bitangents(space_vertices.size(), 0.f);
 		for(unsigned int iFace=0; iFace<pMesh->mNumFaces; ++iFace) {
 			const aiFace& Face = pMesh->mFaces[iFace];
 			assert(Face.mNumIndices == 3);
 			space_triangleList.push_back(Face.mIndices[0]);
 			space_triangleList.push_back(Face.mIndices[1]);
 			space_triangleList.push_back(Face.mIndices[2]);
+
+			//build tangents and bitangents
+			int idV0 = Face.mIndices[0];
+			int idV1 = Face.mIndices[1];
+			int idV2 = Face.mIndices[2];
+
+			glm::vec3 v0 = glm::vec3(space_vertices[3*idV0], space_vertices[3*idV0+1], space_vertices[3*idV0+2]);
+			glm::vec3 v1 = glm::vec3(space_vertices[3*idV1], space_vertices[3*idV1+1], space_vertices[3*idV1+2]);
+			glm::vec3 v2 = glm::vec3(space_vertices[3*idV2], space_vertices[3*idV2+1], space_vertices[3*idV2+2]);
+
+			glm::vec2 uv0 = glm::vec2(space_uv[2*idV0], space_uv[2*idV0+1]);
+			glm::vec2 uv1 = glm::vec2(space_uv[2*idV1], space_uv[2*idV1+1]);
+			glm::vec2 uv2 = glm::vec2(space_uv[2*idV2], space_uv[2*idV2+1]);
+
+			glm::vec3 deltaPos1 = v1 - v0;
+			glm::vec3 deltaPos2 = v2 - v0;
+			glm::vec2 deltaUV1 = uv1 - uv0;
+			glm::vec2 deltaUV2 = uv2 - uv0;
+
+			float r = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV1.y * deltaUV2.x);
+			glm::vec3 tangent = (deltaPos1 * deltaUV2.y   - deltaPos2 * deltaUV1.y)*r;
+			glm::vec3 bitangent = (deltaPos2 * deltaUV1.x   - deltaPos1 * deltaUV2.x)*r;
+
+			space_tangents[3*idV0]+=tangent.x; space_tangents[3*idV0+1]+=tangent.y; space_tangents[3*idV0+2]+=tangent.z;
+			space_tangents[3*idV1]+=tangent.x; space_tangents[3*idV1+1]+=tangent.y; space_tangents[idV1+2]+=tangent.z;
+			space_tangents[3*idV2]+=tangent.x; space_tangents[3*idV2+1]+=tangent.y; space_tangents[idV2+2]+=tangent.z;
+			space_bitangents[3*idV0]+=bitangent.x; space_bitangents[3*idV0+1]+=bitangent.y; space_bitangents[3*idV0+2]+=bitangent.z;
+			space_bitangents[3*idV1]+=bitangent.x; space_bitangents[3*idV1+1]+=bitangent.y; space_bitangents[3*idV1+2]+=bitangent.z;
+			space_bitangents[3*idV2]+=bitangent.x; space_bitangents[3*idV2+1]+=bitangent.y; space_bitangents[3*idV2+2]+=bitangent.z;
+
 			++_iSpaceTriangleCount;
 		}
 
 		GLuint meshVAO;
-		std::vector<GLuint> meshVBOS(4);
+		std::vector<GLuint> meshVBOS(6);
 		glGenVertexArrays(1, &meshVAO);
-		glGenBuffers(4, &(meshVBOS[0]));
+		glGenBuffers(6, &(meshVBOS[0]));
 	
 		glBindVertexArray(meshVAO);
 		// Indexes
@@ -153,6 +187,16 @@ void ScreenBox::init() {
 		glEnableVertexAttribArray(TEXCOORD_LOCATION);
 		glVertexAttribPointer(TEXCOORD_LOCATION, 2, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT)*2, (void*)0);
 		glBufferData(GL_ARRAY_BUFFER, space_uv.size()*sizeof(float), &(space_uv[0]), GL_STATIC_DRAW);
+		// Tangents
+		glBindBuffer(GL_ARRAY_BUFFER, meshVBOS[4]);
+		glEnableVertexAttribArray(TANGENT_LOCATION);
+		glVertexAttribPointer(TANGENT_LOCATION, 3, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT)*3, (void*)0);
+		glBufferData(GL_ARRAY_BUFFER, space_tangents.size()*sizeof(float), &(space_tangents[0]), GL_STATIC_DRAW);
+		// Bitangents
+		glBindBuffer(GL_ARRAY_BUFFER, meshVBOS[5]);
+		glEnableVertexAttribArray(BITANGENT_LOCATION);
+		glVertexAttribPointer(BITANGENT_LOCATION, 3, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT)*3, (void*)0);
+		glBufferData(GL_ARRAY_BUFFER, space_bitangents.size()*sizeof(float), &(space_bitangents[0]), GL_STATIC_DRAW);
 
 		_spaceVertexBuffers.insert(std::make_pair(meshVAO, meshVBOS));
 	}
@@ -160,24 +204,29 @@ void ScreenBox::init() {
 
 	// Build shaders
 	_pSM = new ShaderManager();
-	_pSM->addShader("basic", "shaders/basic.vs", "shaders/basic.fs");
-	_pSM->addUniformLocation("basic", "uMatProjection");
-	_pSM->addUniformLocation("basic", "uMatView");
-	_pSM->addUniformLocation("basic", "uMatModel");
-	_pSM->addUniformLocation("basic", "uCameraPosition");
-	_pSM->addUniformLocation("basic", "uDiffuse");
-	_pSM->addUniformLocation("basic", "uSpec");
+	_pSM->addShader("normalmap", "shaders/normalmap.vs", "shaders/normalmap.fs");
+	_pSM->addUniformLocation("normalmap", "uMatProjection");
+	_pSM->addUniformLocation("normalmap", "uMatView");
+	_pSM->addUniformLocation("normalmap", "uMatModel");
+	_pSM->addUniformLocation("normalmap", "uCameraPosition");
+	_pSM->addUniformLocation("normalmap", "uDiffuse");
+	_pSM->addUniformLocation("normalmap", "uSpec");
+	_pSM->addUniformLocation("normalmap", "uNormalMap");
 
 	// Build texture
 	_pTM = new TextureManager();
 	_pTM->generateNamedTexture("eye_diff", "models/kerrigan/Kerrigan_inf_eye_D.tga", 3);
 	_pTM->generateNamedTexture("eye_spec", "models/kerrigan/Kerrigan_inf_eye_S.tga", 3);
+	_pTM->generateNamedTexture("eye_norm", "models/kerrigan/Kerrigan_inf_eye_N.tga", 3);
 	_pTM->generateNamedTexture("head_diff", "models/kerrigan/Kerrigan_inf_head_D.tga", 3);
 	_pTM->generateNamedTexture("head_spec", "models/kerrigan/Kerrigan_inf_head_S.tga", 3);
+	_pTM->generateNamedTexture("head_norm", "models/kerrigan/Kerrigan_inf_head_N.tga", 3);
 	_pTM->generateNamedTexture("legswings_diff", "models/kerrigan/Kerrigan_inf_legswings_D.tga", 3);
 	_pTM->generateNamedTexture("legswings_spec", "models/kerrigan/Kerrigan_inf_legswings_S.tga", 3);
+	_pTM->generateNamedTexture("legswings_norm", "models/kerrigan/Kerrigan_inf_legswings_N.tga", 3);
 	_pTM->generateNamedTexture("torso_diff", "models/kerrigan/Kerrigan_inf_torso_D.tga", 3);
 	_pTM->generateNamedTexture("torso_spec", "models/kerrigan/Kerrigan_inf_torso_S.tga", 3);
+	_pTM->generateNamedTexture("torso_norm", "models/kerrigan/Kerrigan_inf_torso_N.tga", 3);
 
 	// Camera manipulation data
 	MouseHandling::getInstance()->bLeftMousePressed = false;
@@ -205,28 +254,34 @@ void ScreenBox::launch() {
 		objectToWorld = glm::rotate(objectToWorld, 180.f, glm::vec3(0.f, 1.f, 0.f));
 
 		//draw basic quad
-		glUseProgram(_pSM->getShader("basic"));
+		glUseProgram(_pSM->getShader("normalmap"));
 		glUniformMatrix4fv(_pSM->getUniformLocation("uMatProjection"), 1, GL_FALSE, glm::value_ptr(worldToScreen));
 		glUniformMatrix4fv(_pSM->getUniformLocation("uMatView"), 1, GL_FALSE, glm::value_ptr(worldToView));
 		glUniformMatrix4fv(_pSM->getUniformLocation("uMatModel"), 1, GL_FALSE, glm::value_ptr(objectToWorld));
 		glUniform3fv(_pSM->getUniformLocation("uCameraPosition"), 1, glm::value_ptr(TrackBallCamera::getInstance()->getCameraPosition()));
 		glUniform1i(_pSM->getUniformLocation("uDiffuse"), 0);
 		glUniform1i(_pSM->getUniformLocation("uSpec"), 1);
+		glUniform1i(_pSM->getUniformLocation("uNormalMap"), 2);
 
 		std::vector<std::string> kerriganTexNames;
 		kerriganTexNames.push_back("eye_diff");
 		kerriganTexNames.push_back("eye_spec");
+		kerriganTexNames.push_back("eye_norm");
 		kerriganTexNames.push_back("legswings_diff");
 		kerriganTexNames.push_back("legswings_spec");
+		kerriganTexNames.push_back("legswings_norm");
 		kerriganTexNames.push_back("head_diff");
 		kerriganTexNames.push_back("head_spec");
+		kerriganTexNames.push_back("head_norm");
 		kerriganTexNames.push_back("torso_diff");
 		kerriganTexNames.push_back("torso_spec");
+		kerriganTexNames.push_back("torso_norm");
 
 		int iNameCursor = 0;
 		for(std::map<GLuint, std::vector<GLuint>>::iterator it=_spaceVertexBuffers.begin(); it!=_spaceVertexBuffers.end(); ++it) {
 			_pTM->bindTexture(kerriganTexNames[iNameCursor++], GL_TEXTURE0);
 			_pTM->bindTexture(kerriganTexNames[iNameCursor++], GL_TEXTURE1);
+			_pTM->bindTexture(kerriganTexNames[iNameCursor++], GL_TEXTURE2);
 
 			glBindVertexArray(it->first);
 			glDrawElementsInstanced(GL_TRIANGLES, _iSpaceTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
@@ -256,7 +311,7 @@ void ScreenBox::destroy() {
 	glDeleteBuffers(4, _quadVBOs);
 	for(std::map<GLuint, std::vector<GLuint>>::iterator it=_spaceVertexBuffers.begin(); it!=_spaceVertexBuffers.end(); ++it) {
 		glDeleteVertexArrays(1, &(it->first));
-		glDeleteBuffers(4, &(it->second[0]));
+		glDeleteBuffers(6, &(it->second[0]));
 	}
 
 	delete _pSM;
