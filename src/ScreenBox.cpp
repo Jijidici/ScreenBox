@@ -227,8 +227,28 @@ void ScreenBox::init() {
 	_pSM->addUniformLocation("normalmap", "uNormalMap");
 	_pSM->addUniformLocation("normalmap", "uIsGround");
 
-	// Build texture
+	_pSM->addShader("blit", "shaders/blit.vs", "shaders/blit.fs");
+	_pSM->addUniformLocation("blit", "uTexture1");
+
+	// Build FBOs
 	_pTM = new TextureManager();
+	_pTM->generateProcessTextures(3);
+	_pTM->initProcessTexture(0, _iW, _iH, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
+	_pTM->initProcessTexture(1, _iW, _iH, GL_RGBA32F, GL_RGBA, GL_FLOAT);
+	_pTM->initProcessTexture(2, _iW, _iH, GL_DEPTH_COMPONENT24, GL_DEPTH_COMPONENT, GL_FLOAT);
+
+	glGenFramebuffers(1, &_gbufferFBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, _gbufferFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 , GL_TEXTURE_2D, _pTM->getProcessTexture(0), 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1 , GL_TEXTURE_2D, _pTM->getProcessTexture(1), 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT , GL_TEXTURE_2D, _pTM->getProcessTexture(2), 0);
+
+	if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+    {
+        std::cout << "[!] Error on building gbuffer Framebuffer" << std::endl;
+    }
+
+	// Build texture
 	_pTM->generateNamedTexture("eye_diff", "models/kerrigan/Kerrigan_inf_eye_D.tga", 3);
 	_pTM->generateNamedTexture("eye_spec", "models/kerrigan/Kerrigan_inf_eye_S.tga", 3);
 	_pTM->generateNamedTexture("eye_norm", "models/kerrigan/Kerrigan_inf_eye_N.tga", 3);
@@ -260,6 +280,12 @@ void ScreenBox::launch() {
 		/* *************************************************** *
 		 * ********* RENDER ZONE	
 		 * *************************************************** */
+
+		/// FIRST PASS - GEOMETRY RENDERING ///
+		glBindFramebuffer(GL_FRAMEBUFFER, _gbufferFBO);
+		GLenum gbufferDrawBuffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
+		glDrawBuffers(2, gbufferDrawBuffers);
+
 		glEnable(GL_DEPTH_TEST);
 		glViewport(0, 0, _iW, _iH);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -319,6 +345,38 @@ void ScreenBox::launch() {
 		glBindVertexArray(_quadVAO);
 		glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
 
+		/// SECOND PASS - DEFERRED RENDERING ///
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glViewport(0, 0, _iW, _iH);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		glUseProgram(_pSM->getShader("blit"));
+		glUniform1i(_pSM->getUniformLocation("uTexture1"), 0);
+		_pTM->bindTexture(0, GL_TEXTURE0);
+		glBindVertexArray(_quadVAO);
+		glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
+
+
+		/// DEBUG VIEW ///
+		glDisable(GL_DEPTH_TEST);
+		glUseProgram(_pSM->getShader("blit"));
+		glUniform1i(_pSM->getUniformLocation("uTexture1"), 0);
+
+		glViewport(0, 0, _iW/4, _iH/4);
+		_pTM->bindTexture(0, GL_TEXTURE0);
+		glBindVertexArray(_quadVAO);
+		glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
+
+		glViewport(_iW/4, 0, _iW/4, _iH/4);
+		_pTM->bindTexture(1, GL_TEXTURE0);
+		glBindVertexArray(_quadVAO);
+		glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
+
+		glViewport(2*_iW/4, 0, _iW/4, _iH/4);
+		_pTM->bindTexture(2, GL_TEXTURE0);
+		glBindVertexArray(_quadVAO);
+		glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
+
 		glfwSwapBuffers(_pWindow);
 
 		/* *************************************************** *
@@ -339,6 +397,7 @@ void ScreenBox::launch() {
 void ScreenBox::destroy() {
 	std::cout << "> DESTROY SCREENBOX" <<std::endl;
 
+	glDeleteFramebuffers(1, &_gbufferFBO);
 	glDeleteVertexArrays(1, &_quadVAO);
 	glDeleteBuffers(6, _quadVBOs);
 	for(std::map<GLuint, std::vector<GLuint>>::iterator it=_spaceVertexBuffers.begin(); it!=_spaceVertexBuffers.end(); ++it) {

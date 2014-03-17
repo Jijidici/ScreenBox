@@ -8,8 +8,10 @@
 #include <cassert>
 #include "stb_image.h"
 
-TextureManager::TextureManager() {
-
+TextureManager::TextureManager() 
+	: _namedTextures()
+	, _processTextures(0) {
+	
 }
 
 TextureManager::~TextureManager() {

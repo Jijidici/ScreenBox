@@ -35,6 +35,7 @@ private:
 	int _iSpaceTriangleCount;
 	GLuint _quadVBOs[6];
 	GLuint _quadVAO;
+	GLuint _gbufferFBO;
 	std::map<GLuint, std::vector<GLuint>> _spaceVertexBuffers;
 	
 	ShaderManager* _pSM;
