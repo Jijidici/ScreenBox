@@ -61,7 +61,6 @@ void main() {
 	if (shadowMapDepth + 0.0002 > lightSpacePosition.z ) {
 		color = falloff * att * uLightColor * uLightIntensity * (diff * n_dot_l + spec * vec3(1.0, 1.0, 1.0) *  pow(n_dot_h, spec * 100.0));
 	}
-	//vec3 color = texture(uShadow, vUV).rgb;
 
 	fragColor = vec4(color, 1.);
 }

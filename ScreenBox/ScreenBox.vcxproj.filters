@@ -24,6 +24,9 @@
     <ClCompile Include="..\src\MouseHandling.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\Light.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\ScreenBox.h">
@@ -39,6 +42,9 @@
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\MouseHandling.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Light.h">
       <Filter>src</Filter>
     </ClInclude>
   </ItemGroup>

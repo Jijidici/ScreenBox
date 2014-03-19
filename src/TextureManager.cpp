@@ -114,3 +114,8 @@ void TextureManager::bindTexture(unsigned int iTexId, GLenum textureUnit) {
 	glActiveTexture(textureUnit);
 	glBindTexture(GL_TEXTURE_2D, texId);
 }
+
+void TextureManager::unbindTexture(GLenum textureUnit) {
+	glActiveTexture(textureUnit);
+	glBindTexture(GL_TEXTURE_2D, 0);
+}

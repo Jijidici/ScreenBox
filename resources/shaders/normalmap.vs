@@ -18,7 +18,7 @@ out vec3 vTangent;
 out vec3 vBitangent;
 
 void main() {
-	vPosition = (uMatModel * vec4(position, 0.)).xyz;
+	vPosition = (uMatModel * vec4(position, 1.)).xyz;
 	vNormal = (uMatModel * vec4(normal, 0.)).xyz;
 	vUV = texcoords;
 	vTangent = (uMatModel * vec4(tangent, 0.)).xyz;

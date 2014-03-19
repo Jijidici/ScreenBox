@@ -21,6 +21,7 @@ public:
 	void initProcessTexture(unsigned int iTexId, int iW, int iH, int internalFormat, GLenum inputFormat, GLenum dataType);
 	void bindTexture(std::string sTexName, GLenum textureUnit);
 	void bindTexture(unsigned int iTexId, GLenum textureUnit);
+	void unbindTexture(GLenum textureUnit);
 
 private:
 	std::map<std::string, GLuint> _namedTextures;

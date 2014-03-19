@@ -12,6 +12,7 @@
 #include "ShaderManager.h"
 #include "TextureManager.h"
 #include "TrackBallCamera.h"
+#include "Light.h"
 
 class ScreenBox {
 public:
@@ -40,6 +41,7 @@ private:
 	GLuint _gbufferFBO;
 	GLuint _shadowFBO;
 	std::map<GLuint, std::vector<GLuint>> _spaceVertexBuffers;
+	std::vector<Light*> _lights;
 	
 	ShaderManager* _pSM;
 	TextureManager* _pTM;

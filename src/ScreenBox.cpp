@@ -264,12 +264,18 @@ void ScreenBox::init() {
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1 , GL_TEXTURE_2D, _pTM->getProcessTexture(1), 0);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT , GL_TEXTURE_2D, _pTM->getProcessTexture(2), 0);
 
-	if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-    {
+	if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
         std::cout << "[!] Error on building gbuffer Framebuffer" << std::endl;
     }
 
 	glGenFramebuffers(1, &_shadowFBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, _shadowFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT , GL_TEXTURE_2D, _pTM->getProcessTexture(3), 0);
+	if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+		std::cout << "[!] Error on building shadow Framebuffer" << std::endl;
+	}
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	// Build texture
 	_pTM->generateNamedTexture("eye_diff", "models/kerrigan/Kerrigan_inf_eye_D.tga", 3);
@@ -288,6 +294,12 @@ void ScreenBox::init() {
 	_pTM->generateNamedTexture("ground_spec", "models/ground/metal_plate_S.jpg", 3);
 	_pTM->generateNamedTexture("ground_norm", "models/ground/metal_plate_N.jpg", 3);
 
+	// Init light
+	_lights.push_back(new Light(glm::vec3( 0.f, 2.f, -5.f), glm::vec3(0.f, 2.f, 0.f), glm::vec3(1.f, 0.7f, 0.7f), 1.f, 20.f));
+	_lights.push_back(new Light(glm::vec3( -1.f, 0.1f, -2.f), glm::vec3(0.f, 3.f, 0.f), glm::vec3(0.7f, 1.f, 0.7f), 1.f, 20.f));
+	_lights.push_back(new Light(glm::vec3( 1.f, 0.1f, -2.f), glm::vec3(0.f, 3.f, 0.f), glm::vec3(0.7f, 1.f, 0.7f), 1.f, 20.f));
+	_lights.push_back(new Light(glm::vec3( 0.f, 10.f, 2.f), glm::vec3(0.f, 4.f, 0.f), glm::vec3(0.7f, 0.7f, 1.f), 1.f, 20.f));
+
 	// Camera manipulation data
 	MouseHandling::getInstance()->bLeftMousePressed = false;
 	MouseHandling::getInstance()->savedPosX = 0.;
@@ -296,13 +308,6 @@ void ScreenBox::init() {
 
 void ScreenBox::launch() {
 	std::cout << "> LAUNCH SCREENBOX" <<std::endl;
-
-	glm::vec3 lightPos = glm::vec3(0.f, 4.f, -4.f);
-	glm::vec3 lightTarget = glm::vec3(0.f, 0.f, 2.f);
-	glm::vec3 lightUp = glm::vec3(0.f, 1.f, 0.f);
-	glm::vec3 lightColor = glm::vec3(1.f, 1.f, 1.f);
-	float lightIntensity = 2.f;
-	float lightLength = 20.f;
 
 	// constant matrices
 	glm::mat4 cameraProjection = glm::perspective(45.f, static_cast<float>(_iW)/static_cast<float>(_iH), 0.1f, 100.f);
@@ -327,6 +332,9 @@ void ScreenBox::launch() {
 		/* *************************************************** *
 		 * ********* RENDER ZONE	
 		 * *************************************************** */
+
+		// clean the default framebuffer
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		/// FIRST PASS - GEOMETRY RENDERING ///
 		glBindFramebuffer(GL_FRAMEBUFFER, _gbufferFBO);
@@ -361,63 +369,69 @@ void ScreenBox::launch() {
 		_pTM->bindTexture("ground_norm", GL_TEXTURE2);
 		glBindVertexArray(_quadVAO);
 		glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
+		_pTM->unbindTexture(GL_TEXTURE0);
+		_pTM->unbindTexture(GL_TEXTURE1);
+		_pTM->unbindTexture(GL_TEXTURE2);
 
 		/// SECOND PASS - DEFERRED RENDERING ///
-		// render shadows
-		glBindFramebuffer(GL_FRAMEBUFFER, _shadowFBO);
-		glViewport(0, 0, SHADOW_MAP_SIZE, SHADOW_MAP_SIZE);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		glEnable(GL_DEPTH_TEST);
+		for(unsigned int i=0; i<_lights.size(); ++i) {
+			glm::vec3 lightPos = _lights[i]->getPosition();
+			glm::vec3 lightTarget = _lights[i]->getTarget();
+			glm::vec3 lightDir = glm::normalize(lightTarget - lightPos);
+			glm::vec3 lightUp = glm::vec3(0.f, 1.f, 0.f);
+			glm::vec3 lightColor = _lights[i]->getColor();
+			float lightIntensity = _lights[i]->getIntensity();
+			float lightLength = _lights[i]->getLength();
+			glm::mat4 worldToLight = glm::lookAt(lightPos, lightDir, lightUp);
+			glm::mat4 worldToShadowMap = MAT4F_M1_P1_TO_P0_P1 * lightProjection * worldToLight;
 
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT , GL_TEXTURE_2D, _pTM->getProcessTexture(3), 0);
-		if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-			std::cout << "[!] Error on building shadow Framebuffer" << std::endl;
+			// render shadows
+			glBindFramebuffer(GL_FRAMEBUFFER, _shadowFBO);
+			glViewport(0, 0, SHADOW_MAP_SIZE, SHADOW_MAP_SIZE);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			glEnable(GL_DEPTH_TEST);
+
+			// draw scene
+			glUseProgram(_pSM->getShader("shadow"));
+			glUniformMatrix4fv(_pSM->getUniformLocation("s_mat_proj"), 1, GL_FALSE, glm::value_ptr(lightProjection));
+			glUniformMatrix4fv(_pSM->getUniformLocation("s_mat_view"), 1, GL_FALSE, glm::value_ptr(worldToLight));
+			glUniformMatrix4fv(_pSM->getUniformLocation("s_mat_model"), 1, GL_FALSE, glm::value_ptr(modelObjectToWorld));
+			drawModel();
+			glUniformMatrix4fv(_pSM->getUniformLocation("s_mat_model"), 1, GL_FALSE, glm::value_ptr(groundObjectToWorld));
+			glBindVertexArray(_quadVAO);
+			glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
+
+			// render lighting
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			glViewport(0, 0, _iW, _iH);
+			glDisable(GL_DEPTH_TEST);
+			glEnable(GL_BLEND);
+			glBlendFunc(GL_ONE, GL_ONE);
+
+			glUseProgram(_pSM->getShader("deferred"));
+			glUniform1i(_pSM->getUniformLocation("d_material"), 0);
+			glUniform1i(_pSM->getUniformLocation("d_normal"), 1);
+			glUniform1i(_pSM->getUniformLocation("d_depth"), 2);
+			glUniform1i(_pSM->getUniformLocation("d_shadow"), 3);
+			glUniform3fv(_pSM->getUniformLocation("d_camera_pos"), 1, glm::value_ptr(TrackBallCamera::getInstance()->getCameraPosition()));
+			glUniformMatrix4fv(_pSM->getUniformLocation("d_inv_view_proj"), 1, GL_FALSE, glm::value_ptr(screenToWorld));
+			glUniformMatrix4fv(_pSM->getUniformLocation("d_proj_light"), 1, GL_FALSE, glm::value_ptr(worldToShadowMap));
+			glUniform3fv(_pSM->getUniformLocation("d_light_pos"), 1, glm::value_ptr(lightPos));
+			glUniform3fv(_pSM->getUniformLocation("d_light_target"), 1, glm::value_ptr(lightTarget));
+			glUniform3fv(_pSM->getUniformLocation("d_light_color"), 1, glm::value_ptr(lightColor));
+			glUniform1f(_pSM->getUniformLocation("d_light_intens"), lightIntensity);
+			glUniform1f(_pSM->getUniformLocation("d_light_length"), lightLength);
+
+			_pTM->bindTexture(0, GL_TEXTURE0);
+			_pTM->bindTexture(1, GL_TEXTURE1);
+			_pTM->bindTexture(2, GL_TEXTURE2);
+			_pTM->bindTexture(3, GL_TEXTURE3);
+
+			glBindVertexArray(_quadVAO);
+			glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
+
+			glDisable(GL_BLEND);
 		}
-
-		// draw scene
-		glm::vec3 lightDir = glm::normalize(lightTarget - lightPos);
-		glm::mat4 worldToLight = glm::lookAt(lightPos, lightDir, lightUp);
-		glm::mat4 worldToShadowMap = MAT4F_M1_P1_TO_P0_P1 * lightProjection * worldToLight;
-
-		glUseProgram(_pSM->getShader("shadow"));
-		glUniformMatrix4fv(_pSM->getUniformLocation("s_mat_proj"), 1, GL_FALSE, glm::value_ptr(lightProjection));
-		glUniformMatrix4fv(_pSM->getUniformLocation("s_mat_view"), 1, GL_FALSE, glm::value_ptr(worldToLight));
-		glUniformMatrix4fv(_pSM->getUniformLocation("s_mat_model"), 1, GL_FALSE, glm::value_ptr(modelObjectToWorld));
-		drawModel();
-		glUniformMatrix4fv(_pSM->getUniformLocation("s_mat_model"), 1, GL_FALSE, glm::value_ptr(groundObjectToWorld));
-		_pTM->bindTexture("ground_diff", GL_TEXTURE0);
-		_pTM->bindTexture("ground_spec", GL_TEXTURE1);
-		_pTM->bindTexture("ground_norm", GL_TEXTURE2);
-		glBindVertexArray(_quadVAO);
-		glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
-
-		// Draw lighting
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		glViewport(0, 0, _iW, _iH);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		glDisable(GL_DEPTH_TEST);
-
-		glUseProgram(_pSM->getShader("deferred"));
-		glUniform1i(_pSM->getUniformLocation("d_material"), 0);
-		glUniform1i(_pSM->getUniformLocation("d_normal"), 1);
-		glUniform1i(_pSM->getUniformLocation("d_depth"), 2);
-		glUniform1i(_pSM->getUniformLocation("d_shadow"), 3);
-		glUniform3fv(_pSM->getUniformLocation("d_camera_pos"), 1, glm::value_ptr(TrackBallCamera::getInstance()->getCameraPosition()));
-		glUniformMatrix4fv(_pSM->getUniformLocation("d_inv_view_proj"), 1, GL_FALSE, glm::value_ptr(screenToWorld));
-		glUniformMatrix4fv(_pSM->getUniformLocation("d_proj_light"), 1, GL_FALSE, glm::value_ptr(worldToShadowMap));
-		glUniform3fv(_pSM->getUniformLocation("d_light_pos"), 1, glm::value_ptr(lightPos));
-		glUniform3fv(_pSM->getUniformLocation("d_light_target"), 1, glm::value_ptr(lightTarget));
-		glUniform3fv(_pSM->getUniformLocation("d_light_color"), 1, glm::value_ptr(lightColor));
-		glUniform1f(_pSM->getUniformLocation("d_light_intens"), lightIntensity);
-		glUniform1f(_pSM->getUniformLocation("d_light_length"), lightLength);
-
-		_pTM->bindTexture(0, GL_TEXTURE0);
-		_pTM->bindTexture(1, GL_TEXTURE1);
-		_pTM->bindTexture(2, GL_TEXTURE2);
-		_pTM->bindTexture(3, GL_TEXTURE3);
-
-		glBindVertexArray(_quadVAO);
-		glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
 
 
 		/// DEBUG VIEW ///
@@ -505,6 +519,10 @@ void ScreenBox::drawModel() {
 		glBindVertexArray(it->first);
 		glDrawElementsInstanced(GL_TRIANGLES, _iSpaceTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
 	}
+	
+	_pTM->unbindTexture(GL_TEXTURE0);
+	_pTM->unbindTexture(GL_TEXTURE1);
+	_pTM->unbindTexture(GL_TEXTURE2);
 }
 
 void ScreenBox::onKey(GLFWwindow* window, int key, int scancode, int action, int mods) {
