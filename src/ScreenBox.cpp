@@ -254,6 +254,8 @@ void ScreenBox::init() {
 	_pSM->addUniformLocation("basic", "uMatProjection", "bas_mat_proj");
 	_pSM->addUniformLocation("basic", "uMatView", "bas_mat_view");
 	_pSM->addUniformLocation("basic", "uMatModel", "bas_mat_model");
+	_pSM->addUniformLocation("basic", "uDepth", "bas_depth");
+	_pSM->addUniformLocation("basic", "uFinal", "bas_final");
 
 	// Build FBOs
 	_pTM = new TextureManager();
@@ -484,6 +486,12 @@ void ScreenBox::launch() {
 		glUseProgram(_pSM->getShader("basic"));
 		glUniformMatrix4fv(_pSM->getUniformLocation("bas_mat_proj"), 1, GL_FALSE, glm::value_ptr(cameraProjection));
 		glUniformMatrix4fv(_pSM->getUniformLocation("bas_mat_view"), 1, GL_FALSE, glm::value_ptr(worldToView));
+		glUniform1i(_pSM->getUniformLocation("bas_depth"), 2);
+		glUniform1i(_pSM->getUniformLocation("bas_final"), 4);
+
+		_pTM->bindTexture(2, GL_TEXTURE2);
+		_pTM->bindTexture(4, GL_TEXTURE4);
+
 		for(unsigned int i=0; i<quadsObjectToWorld.size(); ++i) {
 			glUniformMatrix4fv(_pSM->getUniformLocation("bas_mat_model"), 1, GL_FALSE, glm::value_ptr(quadsObjectToWorld[i]));
 			glBindVertexArray(_quadVAO);
