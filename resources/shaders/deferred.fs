@@ -5,6 +5,7 @@ in vec2 vUV;
 uniform sampler2D uMaterial;
 uniform sampler2D uNormal;
 uniform sampler2D uDepth;
+uniform sampler2D uShadow;
 uniform vec3 uCameraPosition;
 uniform vec3 uLightPosition;
 uniform vec3 uLightTarget;
@@ -12,6 +13,7 @@ uniform vec3 uLightColor;
 uniform float uLightIntensity;
 uniform float uLightLength;
 uniform mat4 uInverseViewProjection;
+uniform mat4 uProjectionLight;
 
 out vec4 fragColor;
 
@@ -25,6 +27,11 @@ void main() {
 	vec2 xy = vUV*2. -1.;
 	vec4 wPosition = vec4(xy, depth*2. -1., 1.) * uInverseViewProjection;
 	vec3 position = vec3(wPosition/wPosition.w);
+	
+	// compute shadowmap depth
+	vec4 wlightSpacePosition = uProjectionLight * vec4(position, 1.0);
+	vec3 lightSpacePosition = vec3(wlightSpacePosition/wlightSpacePosition.w);
+	float shadowMapDepth = texture(uShadow, lightSpacePosition.xy).r;
 	
 	//compute point light
 	vec3 l =  normalize(uLightPosition - position);
@@ -49,9 +56,12 @@ void main() {
 	if(d > uLightLength) {
 		att = uLightLength/ (d*d);
 	}
-
-	vec3 color = falloff * att * uLightColor * uLightIntensity * (diff * n_dot_l + spec * vec3(1.0, 1.0, 1.0) *  pow(n_dot_h, spec * 100.0));
-	//vec3 color = vec3(l);
+	
+	vec3 color = vec3(0.);
+	if (shadowMapDepth + 0.0002 > lightSpacePosition.z ) {
+		color = falloff * att * uLightColor * uLightIntensity * (diff * n_dot_l + spec * vec3(1.0, 1.0, 1.0) *  pow(n_dot_h, spec * 100.0));
+	}
+	//vec3 color = texture(uShadow, vUV).rgb;
 
 	fragColor = vec4(color, 1.);
 }

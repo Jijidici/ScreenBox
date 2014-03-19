@@ -24,7 +24,7 @@
 #define TANGENT_LOCATION 3
 #define BITANGENT_LOCATION 4
 
-#define SHADOW_MAP_SIZE 1024
+#define SHADOW_MAP_SIZE 2048
 
 void ScreenBox::init() {
 	std::cout << "> INIT SCREENBOX" <<std::endl;
@@ -235,6 +235,7 @@ void ScreenBox::init() {
 	_pSM->addUniformLocation("deferred", "uMaterial", "d_material");
 	_pSM->addUniformLocation("deferred", "uNormal", "d_normal");
 	_pSM->addUniformLocation("deferred", "uDepth", "d_depth");
+	_pSM->addUniformLocation("deferred", "uShadow", "d_shadow");
 	_pSM->addUniformLocation("deferred", "uCameraPosition", "d_camera_pos");
 	_pSM->addUniformLocation("deferred", "uLightPosition", "d_light_pos");
 	_pSM->addUniformLocation("deferred", "uLightTarget", "d_light_target");
@@ -242,6 +243,7 @@ void ScreenBox::init() {
 	_pSM->addUniformLocation("deferred", "uLightIntensity", "d_light_intens");
 	_pSM->addUniformLocation("deferred", "uLightLength", "d_light_length");
 	_pSM->addUniformLocation("deferred", "uInverseViewProjection", "d_inv_view_proj");
+	_pSM->addUniformLocation("deferred", "uProjectionLight", "d_proj_light");
 
 	_pSM->addShader("shadow", "shaders/normalmap.vs", "shaders/shadow.fs");
 	_pSM->addUniformLocation("shadow", "uMatProjection", "s_mat_proj");
@@ -295,8 +297,8 @@ void ScreenBox::init() {
 void ScreenBox::launch() {
 	std::cout << "> LAUNCH SCREENBOX" <<std::endl;
 
-	glm::vec3 lightPos = glm::vec3(0.f, 3.f, -0.1f);
-	glm::vec3 lightTarget = glm::vec3(0.f, 0.f, 0.f);
+	glm::vec3 lightPos = glm::vec3(0.f, 4.f, -4.f);
+	glm::vec3 lightTarget = glm::vec3(0.f, 0.f, 2.f);
 	glm::vec3 lightUp = glm::vec3(0.f, 1.f, 0.f);
 	glm::vec3 lightColor = glm::vec3(1.f, 1.f, 1.f);
 	float lightIntensity = 2.f;
@@ -305,6 +307,12 @@ void ScreenBox::launch() {
 	// constant matrices
 	glm::mat4 cameraProjection = glm::perspective(45.f, static_cast<float>(_iW)/static_cast<float>(_iH), 0.1f, 100.f);
 	glm::mat4 lightProjection = glm::perspective(60.f, 1.f, 0.1f, 100.f);
+	glm::mat4 MAT4F_M1_P1_TO_P0_P1(
+            0.5f, 0.f, 0.f, 0.f,
+            0.f, 0.5f, 0.f, 0.f,
+            0.f, 0.f, 0.5f, 0.f,
+            0.5f, 0.5f, 0.5f, 1.f
+        ); 
 
 	glm::mat4 modelObjectToWorld = glm::translate(glm::mat4(1.f), glm::vec3(0.f, -2.f, 0.f));
 	modelObjectToWorld = glm::rotate(modelObjectToWorld, 180.f, glm::vec3(0.f, 1.f, 0.f));
@@ -369,6 +377,7 @@ void ScreenBox::launch() {
 		// draw scene
 		glm::vec3 lightDir = glm::normalize(lightTarget - lightPos);
 		glm::mat4 worldToLight = glm::lookAt(lightPos, lightDir, lightUp);
+		glm::mat4 worldToShadowMap = MAT4F_M1_P1_TO_P0_P1 * lightProjection * worldToLight;
 
 		glUseProgram(_pSM->getShader("shadow"));
 		glUniformMatrix4fv(_pSM->getUniformLocation("s_mat_proj"), 1, GL_FALSE, glm::value_ptr(lightProjection));
@@ -392,8 +401,10 @@ void ScreenBox::launch() {
 		glUniform1i(_pSM->getUniformLocation("d_material"), 0);
 		glUniform1i(_pSM->getUniformLocation("d_normal"), 1);
 		glUniform1i(_pSM->getUniformLocation("d_depth"), 2);
+		glUniform1i(_pSM->getUniformLocation("d_shadow"), 3);
 		glUniform3fv(_pSM->getUniformLocation("d_camera_pos"), 1, glm::value_ptr(TrackBallCamera::getInstance()->getCameraPosition()));
 		glUniformMatrix4fv(_pSM->getUniformLocation("d_inv_view_proj"), 1, GL_FALSE, glm::value_ptr(screenToWorld));
+		glUniformMatrix4fv(_pSM->getUniformLocation("d_proj_light"), 1, GL_FALSE, glm::value_ptr(worldToShadowMap));
 		glUniform3fv(_pSM->getUniformLocation("d_light_pos"), 1, glm::value_ptr(lightPos));
 		glUniform3fv(_pSM->getUniformLocation("d_light_target"), 1, glm::value_ptr(lightTarget));
 		glUniform3fv(_pSM->getUniformLocation("d_light_color"), 1, glm::value_ptr(lightColor));
@@ -403,6 +414,7 @@ void ScreenBox::launch() {
 		_pTM->bindTexture(0, GL_TEXTURE0);
 		_pTM->bindTexture(1, GL_TEXTURE1);
 		_pTM->bindTexture(2, GL_TEXTURE2);
+		_pTM->bindTexture(3, GL_TEXTURE3);
 
 		glBindVertexArray(_quadVAO);
 		glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
