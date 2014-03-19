@@ -24,7 +24,7 @@
 #define TANGENT_LOCATION 3
 #define BITANGENT_LOCATION 4
 
-#define SHADOW_MAP_SIZE 2048
+#define SHADOW_MAP_SIZE 2046
 
 void ScreenBox::init() {
 	std::cout << "> INIT SCREENBOX" <<std::endl;
@@ -295,10 +295,13 @@ void ScreenBox::init() {
 	_pTM->generateNamedTexture("ground_norm", "models/ground/metal_plate_N.jpg", 3);
 
 	// Init light
-	_lights.push_back(new Light(glm::vec3( 0.f, 2.f, -5.f), glm::vec3(0.f, 2.f, 0.f), glm::vec3(1.f, 0.7f, 0.7f), 1.f, 20.f));
-	_lights.push_back(new Light(glm::vec3( -1.f, 0.1f, -2.f), glm::vec3(0.f, 3.f, 0.f), glm::vec3(0.7f, 1.f, 0.7f), 1.f, 20.f));
-	_lights.push_back(new Light(glm::vec3( 1.f, 0.1f, -2.f), glm::vec3(0.f, 3.f, 0.f), glm::vec3(0.7f, 1.f, 0.7f), 1.f, 20.f));
-	_lights.push_back(new Light(glm::vec3( 0.f, 10.f, 2.f), glm::vec3(0.f, 4.f, 0.f), glm::vec3(0.7f, 0.7f, 1.f), 1.f, 20.f));
+	_lights.push_back(new Light(glm::vec3( 0.f, 0.5f, -5.f), glm::vec3(0.f, 2.f, 0.f), glm::vec3(1.f, 0.7f, 0.7f), 1.f, 20.f));
+	_lights.push_back(new Light(glm::vec3( 0.f, 2.f, -1.f), glm::vec3(0.f, 2.f, 0.f), glm::vec3(1.f, 1.f, 1.f), 1.f, 20.f));
+	_lights.push_back(new Light(glm::vec3( 0.f, -1.5f, -2.f), glm::vec3(0.f, -1.f, 0.f), glm::vec3(0.7f, 1.f, 0.7f), 1.f, 20.f));
+	_lights.push_back(new Light(glm::vec3( 0.f, -1.5f, 2.f), glm::vec3(0.f, -1.f, 0.f), glm::vec3(0.7f, 1.f, 0.7f), 1.f, 20.f));
+	_lights.push_back(new Light(glm::vec3( -2.f, -1.5f, 0.f), glm::vec3(0.f, -1.f, 0.f), glm::vec3(0.7f, 1.f, 0.7f), 1.f, 20.f));
+	_lights.push_back(new Light(glm::vec3( 2.f, -1.5f, 0.f), glm::vec3(0.f, -1.f, 0.f), glm::vec3(0.7f, 1.f, 0.7f), 1.f, 20.f));
+	_lights.push_back(new Light(glm::vec3( 0.f, 5.f, 2.f), glm::vec3(0.f, -1.f, 0.f), glm::vec3(0.7f, 0.7f, 1.f), 1.f, 20.f));
 
 	// Camera manipulation data
 	MouseHandling::getInstance()->bLeftMousePressed = false;

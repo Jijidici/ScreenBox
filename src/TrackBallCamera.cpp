@@ -42,7 +42,7 @@ void TrackBallCamera::rotateUp(float degrees){
 }
 
 glm::mat4 TrackBallCamera::getViewMatrix(){
-	glm::mat4 viewMatrix = glm::lookAt(glm::vec3(0.f,0.f,m_fDistance), glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f,1.f,0.f));
+	glm::mat4 viewMatrix = glm::lookAt(glm::vec3(0.f,0.f,m_fDistance), glm::vec3(0.f, 1.f, 0.f), glm::vec3(0.f,1.f,0.f));
 	viewMatrix = glm::rotate(viewMatrix, m_fAngleX, glm::vec3(1.f, 0.f, 0.f));
 	viewMatrix = glm::rotate(viewMatrix, m_fAngleY, glm::vec3(0.f, 1.f, 0.f));
 
