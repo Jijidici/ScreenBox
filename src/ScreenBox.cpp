@@ -250,6 +250,11 @@ void ScreenBox::init() {
 	_pSM->addUniformLocation("shadow", "uMatView", "s_mat_view");
 	_pSM->addUniformLocation("shadow", "uMatModel", "s_mat_model");
 
+	_pSM->addShader("basic", "shaders/basic.vs", "shaders/basic.fs");
+	_pSM->addUniformLocation("basic", "uMatProjection", "bas_mat_proj");
+	_pSM->addUniformLocation("basic", "uMatView", "bas_mat_view");
+	_pSM->addUniformLocation("basic", "uMatModel", "bas_mat_model");
+
 	// Build FBOs
 	_pTM = new TextureManager();
 	_pTM->generateProcessTextures(5);
@@ -337,6 +342,11 @@ void ScreenBox::launch() {
 	groundObjectToWorld = glm::rotate(groundObjectToWorld, 90.f, glm::vec3(1.f, 0.f, 0.f));
 	groundObjectToWorld = glm::scale(groundObjectToWorld, glm::vec3(100.f, 100.f, 1.f));
 
+	glm::mat4 quadObjectToWorld = glm::translate(glm::mat4(1.f), glm::vec3(0.f, 1.f, -2.f));
+
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_FRONT);
+
 	while(!glfwWindowShouldClose(_pWindow)) {
 		_dTime = glfwGetTime();
 
@@ -352,6 +362,7 @@ void ScreenBox::launch() {
 		glBindFramebuffer(GL_FRAMEBUFFER, _gbufferFBO);
 		GLenum gbufferDrawBuffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
 		glDrawBuffers(2, gbufferDrawBuffers);
+		glCullFace(GL_BACK);
 
 		glEnable(GL_DEPTH_TEST);
 		glViewport(0, 0, _iW, _iH);
@@ -384,6 +395,8 @@ void ScreenBox::launch() {
 		_pTM->unbindTexture(GL_TEXTURE0);
 		_pTM->unbindTexture(GL_TEXTURE1);
 		_pTM->unbindTexture(GL_TEXTURE2);
+		
+		glCullFace(GL_FRONT);
 
 		/// SECOND PASS - DEFERRED RENDERING ///
 		for(unsigned int i=0; i<_lights.size(); ++i) {
@@ -404,6 +417,7 @@ void ScreenBox::launch() {
 			glEnable(GL_DEPTH_TEST);
 
 			// draw scene
+			glCullFace(GL_BACK);
 			glUseProgram(_pSM->getShader("shadow"));
 			glUniformMatrix4fv(_pSM->getUniformLocation("s_mat_proj"), 1, GL_FALSE, glm::value_ptr(lightProjection));
 			glUniformMatrix4fv(_pSM->getUniformLocation("s_mat_view"), 1, GL_FALSE, glm::value_ptr(worldToLight));
@@ -412,6 +426,7 @@ void ScreenBox::launch() {
 			glUniformMatrix4fv(_pSM->getUniformLocation("s_mat_model"), 1, GL_FALSE, glm::value_ptr(groundObjectToWorld));
 			glBindVertexArray(_quadVAO);
 			glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
+			glCullFace(GL_FRONT);
 
 			// render lighting
 			glBindFramebuffer(GL_FRAMEBUFFER, _finalFBO);
@@ -446,7 +461,30 @@ void ScreenBox::launch() {
 			glDisable(GL_BLEND);
 		}
 
+		/// LAST PASS - FILTER QUADS DRAWING ///
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glViewport(0, 0, _iW, _iH);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glDisable(GL_DEPTH_TEST);
+
+		// draw scene as background
+		glUseProgram(_pSM->getShader("blit"));
+		glUniform1i(_pSM->getUniformLocation("b_tex"), 0);
+		_pTM->bindTexture(4, GL_TEXTURE0);
+		glBindVertexArray(_quadVAO);
+		glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
+		
+		// draw the quads
+		glCullFace(GL_BACK);
+		glUseProgram(_pSM->getShader("basic"));
+		glUniformMatrix4fv(_pSM->getUniformLocation("bas_mat_proj"), 1, GL_FALSE, glm::value_ptr(cameraProjection));
+		glUniformMatrix4fv(_pSM->getUniformLocation("bas_mat_view"), 1, GL_FALSE, glm::value_ptr(worldToView));
+		glUniformMatrix4fv(_pSM->getUniformLocation("bas_mat_model"), 1, GL_FALSE, glm::value_ptr(quadObjectToWorld));
+		glBindVertexArray(_quadVAO);
+		glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
+		
+		glCullFace(GL_FRONT);
+
 		/// DEBUG VIEW ///
 		glDisable(GL_DEPTH_TEST);
 		glUseProgram(_pSM->getShader("blit"));
