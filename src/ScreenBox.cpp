@@ -342,7 +342,12 @@ void ScreenBox::launch() {
 	groundObjectToWorld = glm::rotate(groundObjectToWorld, 90.f, glm::vec3(1.f, 0.f, 0.f));
 	groundObjectToWorld = glm::scale(groundObjectToWorld, glm::vec3(100.f, 100.f, 1.f));
 
-	glm::mat4 quadObjectToWorld = glm::translate(glm::mat4(1.f), glm::vec3(0.f, 1.f, -2.f));
+	std::vector<glm::mat4> quadsObjectToWorld(8);
+	for(int i=0; i<8; ++i) {
+		quadsObjectToWorld[i] = glm::rotate(glm::mat4(1.f), i*(360.f/8.f), glm::vec3(0.f, 1.f, 0.f));
+		quadsObjectToWorld[i] = glm::translate(quadsObjectToWorld[i], glm::vec3(0.f, 1.f, -2.f));
+	}
+
 
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_FRONT);
@@ -479,9 +484,11 @@ void ScreenBox::launch() {
 		glUseProgram(_pSM->getShader("basic"));
 		glUniformMatrix4fv(_pSM->getUniformLocation("bas_mat_proj"), 1, GL_FALSE, glm::value_ptr(cameraProjection));
 		glUniformMatrix4fv(_pSM->getUniformLocation("bas_mat_view"), 1, GL_FALSE, glm::value_ptr(worldToView));
-		glUniformMatrix4fv(_pSM->getUniformLocation("bas_mat_model"), 1, GL_FALSE, glm::value_ptr(quadObjectToWorld));
-		glBindVertexArray(_quadVAO);
-		glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
+		for(unsigned int i=0; i<quadsObjectToWorld.size(); ++i) {
+			glUniformMatrix4fv(_pSM->getUniformLocation("bas_mat_model"), 1, GL_FALSE, glm::value_ptr(quadsObjectToWorld[i]));
+			glBindVertexArray(_quadVAO);
+			glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
+		}
 		
 		glCullFace(GL_FRONT);
 
