@@ -252,11 +252,12 @@ void ScreenBox::init() {
 
 	// Build FBOs
 	_pTM = new TextureManager();
-	_pTM->generateProcessTextures(4);
+	_pTM->generateProcessTextures(5);
 	_pTM->initProcessTexture(0, _iW, _iH, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
 	_pTM->initProcessTexture(1, _iW, _iH, GL_RGBA32F, GL_RGBA, GL_FLOAT);
 	_pTM->initProcessTexture(2, _iW, _iH, GL_DEPTH_COMPONENT24, GL_DEPTH_COMPONENT, GL_FLOAT);
 	_pTM->initProcessTexture(3, SHADOW_MAP_SIZE, SHADOW_MAP_SIZE, GL_DEPTH_COMPONENT24, GL_DEPTH_COMPONENT, GL_FLOAT);
+	_pTM->initProcessTexture(4, _iW, _iH, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
 
 	glGenFramebuffers(1, &_gbufferFBO);
 	glBindFramebuffer(GL_FRAMEBUFFER, _gbufferFBO);
@@ -273,6 +274,13 @@ void ScreenBox::init() {
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT , GL_TEXTURE_2D, _pTM->getProcessTexture(3), 0);
 	if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
 		std::cout << "[!] Error on building shadow Framebuffer" << std::endl;
+	}
+
+	glGenFramebuffers(1, &_finalFBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, _finalFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 , GL_TEXTURE_2D, _pTM->getProcessTexture(4), 0);
+	if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+		std::cout << "[!] Error on building final Framebuffer" << std::endl;
 	}
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -336,7 +344,8 @@ void ScreenBox::launch() {
 		 * ********* RENDER ZONE	
 		 * *************************************************** */
 
-		// clean the default framebuffer
+		// clean the final framebuffer
+		glBindFramebuffer(GL_FRAMEBUFFER, _finalFBO);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		/// FIRST PASS - GEOMETRY RENDERING ///
@@ -405,7 +414,8 @@ void ScreenBox::launch() {
 			glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
 
 			// render lighting
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			glBindFramebuffer(GL_FRAMEBUFFER, _finalFBO);
+			glDrawBuffers(1, &(gbufferDrawBuffers[0]));
 			glViewport(0, 0, _iW, _iH);
 			glDisable(GL_DEPTH_TEST);
 			glEnable(GL_BLEND);
@@ -436,7 +446,7 @@ void ScreenBox::launch() {
 			glDisable(GL_BLEND);
 		}
 
-
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		/// DEBUG VIEW ///
 		glDisable(GL_DEPTH_TEST);
 		glUseProgram(_pSM->getShader("blit"));
@@ -458,7 +468,7 @@ void ScreenBox::launch() {
 		glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
 
 		glViewport(3*_iW/4, 0, _iW/4, _iH/4);
-		_pTM->bindTexture(3, GL_TEXTURE0);
+		_pTM->bindTexture(4, GL_TEXTURE0);
 		glBindVertexArray(_quadVAO);
 		glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
 

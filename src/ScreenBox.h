@@ -40,6 +40,7 @@ private:
 	GLuint _quadVAO;
 	GLuint _gbufferFBO;
 	GLuint _shadowFBO;
+	GLuint _finalFBO;
 	std::map<GLuint, std::vector<GLuint>> _spaceVertexBuffers;
 	std::vector<Light*> _lights;
 	
