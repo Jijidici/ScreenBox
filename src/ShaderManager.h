@@ -16,7 +16,7 @@ public:
 	void addShader(std::string sTag, const char* sVSPath, const char* sFSPath);
 	GLuint getShader(std::string sTag);
 
-	void addUniformLocation(std::string sShaderTag, std::string sUniformName);
+	void addUniformLocation(std::string sShaderTag, std::string sUniformName, std::string sUniformTag);
 	GLuint getUniformLocation(std::string sUniformName);
 
 

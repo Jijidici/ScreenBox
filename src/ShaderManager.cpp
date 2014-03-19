@@ -32,10 +32,10 @@ GLuint ShaderManager::getShader(std::string sTag) {
 	return it->second;
 }
 
-void ShaderManager::addUniformLocation(std::string sShaderTag, std::string sUniformName) {
+void ShaderManager::addUniformLocation(std::string sShaderTag, std::string sUniformName, std::string sUniformTag) {
 	GLuint shader = getShader(sShaderTag);
 	GLuint location = glGetUniformLocation(shader, sUniformName.c_str());
-	_locationMap.insert(std::make_pair(sUniformName, location));
+	_locationMap.insert(std::make_pair(sUniformTag, location));
 }
 
 GLuint ShaderManager::getUniformLocation(std::string sUniformName) {

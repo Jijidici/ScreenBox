@@ -24,6 +24,8 @@
 #define TANGENT_LOCATION 3
 #define BITANGENT_LOCATION 4
 
+#define SHADOW_MAP_SIZE 1024
+
 void ScreenBox::init() {
 	std::cout << "> INIT SCREENBOX" <<std::endl;
 
@@ -72,7 +74,7 @@ void ScreenBox::init() {
 	float quad_normals[] = { 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f };
 	float quad_uv[] = {0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 1.f, 1.f };
 	float quad_tangents[] = { 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f };
-	float quad_bitangents[] = { 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f };
+	float quad_bitangents[] = { 0.f, -1.f, 0.f, 0.f, -1.f, 0.f, 0.f, -1.f, 0.f, 0.f, -1.f, 0.f };
 
 	glGenVertexArrays(1, &_quadVAO);
 	glGenBuffers(6,_quadVBOs);
@@ -218,35 +220,41 @@ void ScreenBox::init() {
 	// Build shaders
 	_pSM = new ShaderManager();
 	_pSM->addShader("normalmap", "shaders/normalmap.vs", "shaders/normalmap.fs");
-	_pSM->addUniformLocation("normalmap", "uMatProjection");
-	_pSM->addUniformLocation("normalmap", "uMatView");
-	_pSM->addUniformLocation("normalmap", "uMatModel");
-	_pSM->addUniformLocation("normalmap", "uDiffuse");
-	_pSM->addUniformLocation("normalmap", "uSpec");
-	_pSM->addUniformLocation("normalmap", "uNormalMap");
-	_pSM->addUniformLocation("normalmap", "uIsGround");
+	_pSM->addUniformLocation("normalmap", "uMatProjection", "n_mat_proj");
+	_pSM->addUniformLocation("normalmap", "uMatView", "n_mat_view");
+	_pSM->addUniformLocation("normalmap", "uMatModel", "n_mat_model");
+	_pSM->addUniformLocation("normalmap", "uDiffuse", "n_diff");
+	_pSM->addUniformLocation("normalmap", "uSpec", "n_spec");
+	_pSM->addUniformLocation("normalmap", "uNormalMap", "n_normal_map");
+	_pSM->addUniformLocation("normalmap", "uIsGround", "n_is_ground");
 
 	_pSM->addShader("blit", "shaders/blit.vs", "shaders/blit.fs");
-	_pSM->addUniformLocation("blit", "uTexture1");
+	_pSM->addUniformLocation("blit", "uTexture1", "b_tex");
 
 	_pSM->addShader("deferred", "shaders/blit.vs", "shaders/deferred.fs");
-	_pSM->addUniformLocation("deferred", "uMaterial");
-	_pSM->addUniformLocation("deferred", "uNormal");
-	_pSM->addUniformLocation("deferred", "uDepth");
-	_pSM->addUniformLocation("deferred", "uCameraPosition");
-	_pSM->addUniformLocation("deferred", "uLightPosition");
-	_pSM->addUniformLocation("deferred", "uLightTarget");
-	_pSM->addUniformLocation("deferred", "uLightColor");
-	_pSM->addUniformLocation("deferred", "uLightIntensity");
-	_pSM->addUniformLocation("deferred", "uLightLength");
-	_pSM->addUniformLocation("deferred", "uInverseViewProjection");
+	_pSM->addUniformLocation("deferred", "uMaterial", "d_material");
+	_pSM->addUniformLocation("deferred", "uNormal", "d_normal");
+	_pSM->addUniformLocation("deferred", "uDepth", "d_depth");
+	_pSM->addUniformLocation("deferred", "uCameraPosition", "d_camera_pos");
+	_pSM->addUniformLocation("deferred", "uLightPosition", "d_light_pos");
+	_pSM->addUniformLocation("deferred", "uLightTarget", "d_light_target");
+	_pSM->addUniformLocation("deferred", "uLightColor", "d_light_color");
+	_pSM->addUniformLocation("deferred", "uLightIntensity", "d_light_intens");
+	_pSM->addUniformLocation("deferred", "uLightLength", "d_light_length");
+	_pSM->addUniformLocation("deferred", "uInverseViewProjection", "d_inv_view_proj");
+
+	_pSM->addShader("shadow", "shaders/normalmap.vs", "shaders/shadow.fs");
+	_pSM->addUniformLocation("shadow", "uMatProjection", "s_mat_proj");
+	_pSM->addUniformLocation("shadow", "uMatView", "s_mat_view");
+	_pSM->addUniformLocation("shadow", "uMatModel", "s_mat_model");
 
 	// Build FBOs
 	_pTM = new TextureManager();
-	_pTM->generateProcessTextures(3);
+	_pTM->generateProcessTextures(4);
 	_pTM->initProcessTexture(0, _iW, _iH, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
 	_pTM->initProcessTexture(1, _iW, _iH, GL_RGBA32F, GL_RGBA, GL_FLOAT);
 	_pTM->initProcessTexture(2, _iW, _iH, GL_DEPTH_COMPONENT24, GL_DEPTH_COMPONENT, GL_FLOAT);
+	_pTM->initProcessTexture(3, SHADOW_MAP_SIZE, SHADOW_MAP_SIZE, GL_DEPTH_COMPONENT24, GL_DEPTH_COMPONENT, GL_FLOAT);
 
 	glGenFramebuffers(1, &_gbufferFBO);
 	glBindFramebuffer(GL_FRAMEBUFFER, _gbufferFBO);
@@ -258,6 +266,8 @@ void ScreenBox::init() {
     {
         std::cout << "[!] Error on building gbuffer Framebuffer" << std::endl;
     }
+
+	glGenFramebuffers(1, &_shadowFBO);
 
 	// Build texture
 	_pTM->generateNamedTexture("eye_diff", "models/kerrigan/Kerrigan_inf_eye_D.tga", 3);
@@ -285,6 +295,24 @@ void ScreenBox::init() {
 void ScreenBox::launch() {
 	std::cout << "> LAUNCH SCREENBOX" <<std::endl;
 
+	glm::vec3 lightPos = glm::vec3(0.f, 3.f, -0.1f);
+	glm::vec3 lightTarget = glm::vec3(0.f, 0.f, 0.f);
+	glm::vec3 lightUp = glm::vec3(0.f, 1.f, 0.f);
+	glm::vec3 lightColor = glm::vec3(1.f, 1.f, 1.f);
+	float lightIntensity = 2.f;
+	float lightLength = 20.f;
+
+	// constant matrices
+	glm::mat4 cameraProjection = glm::perspective(45.f, static_cast<float>(_iW)/static_cast<float>(_iH), 0.1f, 100.f);
+	glm::mat4 lightProjection = glm::perspective(60.f, 1.f, 0.1f, 100.f);
+
+	glm::mat4 modelObjectToWorld = glm::translate(glm::mat4(1.f), glm::vec3(0.f, -2.f, 0.f));
+	modelObjectToWorld = glm::rotate(modelObjectToWorld, 180.f, glm::vec3(0.f, 1.f, 0.f));
+
+	glm::mat4  groundObjectToWorld = glm::translate(glm::mat4(1.f), glm::vec3(0.f, -2.f, 0.f));
+	groundObjectToWorld = glm::rotate(groundObjectToWorld, 90.f, glm::vec3(1.f, 0.f, 0.f));
+	groundObjectToWorld = glm::scale(groundObjectToWorld, glm::vec3(100.f, 100.f, 1.f));
+
 	while(!glfwWindowShouldClose(_pWindow)) {
 		_dTime = glfwGetTime();
 
@@ -301,78 +329,76 @@ void ScreenBox::launch() {
 		glViewport(0, 0, _iW, _iH);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		// Compute space matrices
-		glm::mat4 worldToScreen = glm::perspective(60.f, static_cast<float>(_iW)/static_cast<float>(_iH), 0.1f, 100.f);
+		// Compute view matrices
 		glm::mat4 worldToView = TrackBallCamera::getInstance()->getViewMatrix();  // JOJO ! C'est ici que je récupère la matrice de vue de la caméra, il suffit que le programme de détection la mette ici
-		glm::mat4 objectToWorld = glm::translate(glm::mat4(1.f), glm::vec3(0.f, -2.f, 0.f));
-		objectToWorld = glm::rotate(objectToWorld, 180.f, glm::vec3(0.f, 1.f, 0.f));
+		glm::mat4 worldToScreen = cameraProjection * worldToView;
+		glm::mat4 screenToWorld = glm::transpose(glm::inverse(worldToScreen));
 
-		// Draw space model
+		// Draw scene
 		glUseProgram(_pSM->getShader("normalmap"));
-		glUniformMatrix4fv(_pSM->getUniformLocation("uMatProjection"), 1, GL_FALSE, glm::value_ptr(worldToScreen));
-		glUniformMatrix4fv(_pSM->getUniformLocation("uMatView"), 1, GL_FALSE, glm::value_ptr(worldToView));
-		glUniformMatrix4fv(_pSM->getUniformLocation("uMatModel"), 1, GL_FALSE, glm::value_ptr(objectToWorld));
-		glUniform1i(_pSM->getUniformLocation("uDiffuse"), 0);
-		glUniform1i(_pSM->getUniformLocation("uSpec"), 1);
-		glUniform1i(_pSM->getUniformLocation("uNormalMap"), 2);
-		glUniform1i(_pSM->getUniformLocation("uIsGround"), 0);
+		glUniformMatrix4fv(_pSM->getUniformLocation("n_mat_proj"), 1, GL_FALSE, glm::value_ptr(cameraProjection));
+		glUniformMatrix4fv(_pSM->getUniformLocation("n_mat_view"), 1, GL_FALSE, glm::value_ptr(worldToView));
+		glUniformMatrix4fv(_pSM->getUniformLocation("n_mat_model"), 1, GL_FALSE, glm::value_ptr(modelObjectToWorld));
+		glUniform1i(_pSM->getUniformLocation("n_diff"), 0);
+		glUniform1i(_pSM->getUniformLocation("n_spec"), 1);
+		glUniform1i(_pSM->getUniformLocation("n_normal_map"), 2);
+		glUniform1i(_pSM->getUniformLocation("n_is_ground"), 0);
+		drawModel();
 
-		std::vector<std::string> kerriganTexNames;
-		kerriganTexNames.push_back("eye_diff");
-		kerriganTexNames.push_back("eye_spec");
-		kerriganTexNames.push_back("eye_norm");
-		kerriganTexNames.push_back("legswings_diff");
-		kerriganTexNames.push_back("legswings_spec");
-		kerriganTexNames.push_back("legswings_norm");
-		kerriganTexNames.push_back("head_diff");
-		kerriganTexNames.push_back("head_spec");
-		kerriganTexNames.push_back("head_norm");
-		kerriganTexNames.push_back("torso_diff");
-		kerriganTexNames.push_back("torso_spec");
-		kerriganTexNames.push_back("torso_norm");
-
-		int iNameCursor = 0;
-		for(std::map<GLuint, std::vector<GLuint>>::iterator it=_spaceVertexBuffers.begin(); it!=_spaceVertexBuffers.end(); ++it) {
-			_pTM->bindTexture(kerriganTexNames[iNameCursor++], GL_TEXTURE0);
-			_pTM->bindTexture(kerriganTexNames[iNameCursor++], GL_TEXTURE1);
-			_pTM->bindTexture(kerriganTexNames[iNameCursor++], GL_TEXTURE2);
-
-			glBindVertexArray(it->first);
-			glDrawElementsInstanced(GL_TRIANGLES, _iSpaceTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
-		}
-
-		// Draw the ground quad
-		objectToWorld = glm::translate(glm::mat4(1.f), glm::vec3(0.f, -2.f, 0.f));
-		objectToWorld = glm::rotate(objectToWorld, 90.f, glm::vec3(1.f, 0.f, 0.f));
-		objectToWorld = glm::scale(objectToWorld, glm::vec3(100.f, 100.f, 1.f));
-		glUniformMatrix4fv(_pSM->getUniformLocation("uMatModel"), 1, GL_FALSE, glm::value_ptr(objectToWorld));
-		glUniform1i(_pSM->getUniformLocation("uIsGround"), 1);
-
+		// draw the ground quad
+		glUniformMatrix4fv(_pSM->getUniformLocation("n_mat_model"), 1, GL_FALSE, glm::value_ptr(groundObjectToWorld));
+		glUniform1i(_pSM->getUniformLocation("n_is_ground"), 1);
 		_pTM->bindTexture("ground_diff", GL_TEXTURE0);
 		_pTM->bindTexture("ground_spec", GL_TEXTURE1);
 		_pTM->bindTexture("ground_norm", GL_TEXTURE2);
-
 		glBindVertexArray(_quadVAO);
 		glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
 
 		/// SECOND PASS - DEFERRED RENDERING ///
+		// render shadows
+		glBindFramebuffer(GL_FRAMEBUFFER, _shadowFBO);
+		glViewport(0, 0, SHADOW_MAP_SIZE, SHADOW_MAP_SIZE);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glEnable(GL_DEPTH_TEST);
+
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT , GL_TEXTURE_2D, _pTM->getProcessTexture(3), 0);
+		if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+			std::cout << "[!] Error on building shadow Framebuffer" << std::endl;
+		}
+
+		// draw scene
+		glm::vec3 lightDir = glm::normalize(lightTarget - lightPos);
+		glm::mat4 worldToLight = glm::lookAt(lightPos, lightDir, lightUp);
+
+		glUseProgram(_pSM->getShader("shadow"));
+		glUniformMatrix4fv(_pSM->getUniformLocation("s_mat_proj"), 1, GL_FALSE, glm::value_ptr(lightProjection));
+		glUniformMatrix4fv(_pSM->getUniformLocation("s_mat_view"), 1, GL_FALSE, glm::value_ptr(worldToLight));
+		glUniformMatrix4fv(_pSM->getUniformLocation("s_mat_model"), 1, GL_FALSE, glm::value_ptr(modelObjectToWorld));
+		drawModel();
+		glUniformMatrix4fv(_pSM->getUniformLocation("s_mat_model"), 1, GL_FALSE, glm::value_ptr(groundObjectToWorld));
+		_pTM->bindTexture("ground_diff", GL_TEXTURE0);
+		_pTM->bindTexture("ground_spec", GL_TEXTURE1);
+		_pTM->bindTexture("ground_norm", GL_TEXTURE2);
+		glBindVertexArray(_quadVAO);
+		glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
+
+		// Draw lighting
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glViewport(0, 0, _iW, _iH);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		glm::mat4 screenToWorld = glm::transpose(glm::inverse(worldToScreen * worldToView));
+		glDisable(GL_DEPTH_TEST);
 
 		glUseProgram(_pSM->getShader("deferred"));
-		glUniform1i(_pSM->getUniformLocation("uMaterial"), 0);
-		glUniform1i(_pSM->getUniformLocation("uNormal"), 1);
-		glUniform1i(_pSM->getUniformLocation("uDepth"), 2);
-		glUniform3fv(_pSM->getUniformLocation("uCameraPosition"), 1, glm::value_ptr(TrackBallCamera::getInstance()->getCameraPosition()));
-		glUniformMatrix4fv(_pSM->getUniformLocation("uInverseViewProjection"), 1, GL_FALSE, glm::value_ptr(screenToWorld));
-		glUniform3fv(_pSM->getUniformLocation("uLightPosition"), 1, glm::value_ptr(glm::vec3(0.f, 4.f, -3.f)));
-		glUniform3fv(_pSM->getUniformLocation("uLightTarget"), 1, glm::value_ptr(glm::vec3(0.f, 0.f, 1.f)));
-		glUniform3fv(_pSM->getUniformLocation("uLightColor"), 1, glm::value_ptr(glm::vec3(1.f, 1.f, 1.f)));
-		glUniform1f(_pSM->getUniformLocation("uLightIntensity"), 2.f);
-		glUniform1f(_pSM->getUniformLocation("uLightLength"), 20.f);
+		glUniform1i(_pSM->getUniformLocation("d_material"), 0);
+		glUniform1i(_pSM->getUniformLocation("d_normal"), 1);
+		glUniform1i(_pSM->getUniformLocation("d_depth"), 2);
+		glUniform3fv(_pSM->getUniformLocation("d_camera_pos"), 1, glm::value_ptr(TrackBallCamera::getInstance()->getCameraPosition()));
+		glUniformMatrix4fv(_pSM->getUniformLocation("d_inv_view_proj"), 1, GL_FALSE, glm::value_ptr(screenToWorld));
+		glUniform3fv(_pSM->getUniformLocation("d_light_pos"), 1, glm::value_ptr(lightPos));
+		glUniform3fv(_pSM->getUniformLocation("d_light_target"), 1, glm::value_ptr(lightTarget));
+		glUniform3fv(_pSM->getUniformLocation("d_light_color"), 1, glm::value_ptr(lightColor));
+		glUniform1f(_pSM->getUniformLocation("d_light_intens"), lightIntensity);
+		glUniform1f(_pSM->getUniformLocation("d_light_length"), lightLength);
 
 		_pTM->bindTexture(0, GL_TEXTURE0);
 		_pTM->bindTexture(1, GL_TEXTURE1);
@@ -385,7 +411,7 @@ void ScreenBox::launch() {
 		/// DEBUG VIEW ///
 		glDisable(GL_DEPTH_TEST);
 		glUseProgram(_pSM->getShader("blit"));
-		glUniform1i(_pSM->getUniformLocation("uTexture1"), 0);
+		glUniform1i(_pSM->getUniformLocation("b_tex"), 0);
 
 		glViewport(0, 0, _iW/4, _iH/4);
 		_pTM->bindTexture(0, GL_TEXTURE0);
@@ -399,6 +425,11 @@ void ScreenBox::launch() {
 
 		glViewport(2*_iW/4, 0, _iW/4, _iH/4);
 		_pTM->bindTexture(2, GL_TEXTURE0);
+		glBindVertexArray(_quadVAO);
+		glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
+
+		glViewport(3*_iW/4, 0, _iW/4, _iH/4);
+		_pTM->bindTexture(3, GL_TEXTURE0);
 		glBindVertexArray(_quadVAO);
 		glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
 
@@ -423,6 +454,7 @@ void ScreenBox::destroy() {
 	std::cout << "> DESTROY SCREENBOX" <<std::endl;
 
 	glDeleteFramebuffers(1, &_gbufferFBO);
+	glDeleteFramebuffers(1, &_shadowFBO);
 	glDeleteVertexArrays(1, &_quadVAO);
 	glDeleteBuffers(6, _quadVBOs);
 	for(std::map<GLuint, std::vector<GLuint>>::iterator it=_spaceVertexBuffers.begin(); it!=_spaceVertexBuffers.end(); ++it) {
@@ -435,6 +467,32 @@ void ScreenBox::destroy() {
 
 	glfwDestroyWindow(_pWindow);
 	glfwTerminate();
+}
+
+void ScreenBox::drawModel() {
+	std::vector<std::string> kerriganTexNames;
+	kerriganTexNames.push_back("eye_diff");
+	kerriganTexNames.push_back("eye_spec");
+	kerriganTexNames.push_back("eye_norm");
+	kerriganTexNames.push_back("legswings_diff");
+	kerriganTexNames.push_back("legswings_spec");
+	kerriganTexNames.push_back("legswings_norm");
+	kerriganTexNames.push_back("head_diff");
+	kerriganTexNames.push_back("head_spec");
+	kerriganTexNames.push_back("head_norm");
+	kerriganTexNames.push_back("torso_diff");
+	kerriganTexNames.push_back("torso_spec");
+	kerriganTexNames.push_back("torso_norm");
+
+	int iNameCursor = 0;
+	for(std::map<GLuint, std::vector<GLuint>>::iterator it=_spaceVertexBuffers.begin(); it!=_spaceVertexBuffers.end(); ++it) {
+		_pTM->bindTexture(kerriganTexNames[iNameCursor++], GL_TEXTURE0);
+		_pTM->bindTexture(kerriganTexNames[iNameCursor++], GL_TEXTURE1);
+		_pTM->bindTexture(kerriganTexNames[iNameCursor++], GL_TEXTURE2);
+
+		glBindVertexArray(it->first);
+		glDrawElementsInstanced(GL_TRIANGLES, _iSpaceTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
+	}
 }
 
 void ScreenBox::onKey(GLFWwindow* window, int key, int scancode, int action, int mods) {

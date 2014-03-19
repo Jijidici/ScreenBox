@@ -25,6 +25,8 @@ private:
 	static void onCursorPos(GLFWwindow* window, double xpos, double ypos);
 	static void onMouseButton(GLFWwindow* window, int button, int action, int mods);
 
+	void drawModel();
+
 	GLFWwindow* _pWindow;
 	int _iW;
 	int _iH;
@@ -36,6 +38,7 @@ private:
 	GLuint _quadVBOs[6];
 	GLuint _quadVAO;
 	GLuint _gbufferFBO;
+	GLuint _shadowFBO;
 	std::map<GLuint, std::vector<GLuint>> _spaceVertexBuffers;
 	
 	ShaderManager* _pSM;
