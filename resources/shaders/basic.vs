@@ -16,7 +16,7 @@ out vec3 vNormal;
 out vec2 vUV;
 
 void main() {
-	vPosition = (uMatModel * vec4(vPosition, 1.)).xyz;
+	vPosition = (uMatModel * vec4(position, 1.)).xyz;
 	vViewSpacePosition = (uMatView * uMatModel * vec4(position, 1.)).xyz;
 	vNormal = (uMatModel * vec4(normal, 0.)).xyz;
 	vUV = texcoords;

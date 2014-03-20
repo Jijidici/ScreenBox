@@ -5,6 +5,7 @@ in vec3 vViewSpacePosition;
 in vec3 vNormal;
 in vec2 vUV;
 
+uniform ivec2 uWinSize;
 uniform sampler2D uMaterial;
 uniform sampler2D uDepth;
 uniform sampler2D uFinal; 
@@ -182,11 +183,21 @@ vec3 getSSAO() {
 	return retColor;
 }
 
+vec3 getZoom() {
+	vec3 retColor = vec3(0.);
+	ivec2 fragCoord = ivec2(gl_FragCoord.xy - uWinSize/2);
+	fragCoord = ivec2(int(fragCoord.x/1.5), int(fragCoord.y/1.5));
+	fragCoord += uWinSize/2;
+	retColor = texelFetch(uFinal, fragCoord, 0).rgb;
+	
+	return retColor;
+}
+
 // MAIN
 void main() {
 	vec3 color =  vec3(0.9, 0.6, 0.1);
 	if(vUV.x > 0.01 && vUV.x < 1.-0.01 && vUV.y > 0.01 && vUV.y < 1.-0.01) {
-		color = getSSAO();
+		color = getZoom();
 	}	
 	
 	fragColor = vec4(color, 1.);
