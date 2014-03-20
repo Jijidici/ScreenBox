@@ -137,7 +137,7 @@ vec3 getXRayFilter() {
 	float fragDepth = max(min(getRealDepthFromQuad(texelFetch(uDepth, ivec2(gl_FragCoord), 0).r)/2.-0.5, 1.), 0.);
 	float depthDiff = 0.;
 	if(fragDepth < 1.) {
-		int kernelSize = 3;
+		int kernelSize = 2;
 		for (int i=-kernelSize; i<=kernelSize; i++) {
 			for (int j=-kernelSize; j<=kernelSize; j++) {
 				if(i != 0 && j != 0) {
