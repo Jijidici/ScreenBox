@@ -59,9 +59,13 @@ vec3 RGBtoHSL(float r, float g, float b){
 	}
 }
 
+float getRealDepth(float depth) {
+	return 20./(100.1 - (2.*depth-1.) * 99.9);
+}
+
 float getRealDepthFromQuad(float depth) {
 	float quadFragDepth = length(vViewSpacePosition);
-	return (2. * 0.1 * 100. / (100. + 0.1 - (2.*depth-1.) * (100. - 0.1)))- quadFragDepth;
+	return getRealDepth(depth) - quadFragDepth;
 }
 
 // SHADING FUNCTIONS
@@ -126,8 +130,24 @@ vec3 getSaturatedFilter() {
 	return retColor;
 }
 
-vec3 getNightVisionFilter() {
+vec3 getXRayFilter() {
 	vec3 retColor = vec3(1., 0., 1.);
+	
+	// sampling
+	float fragDepth = max(min(getRealDepthFromQuad(texelFetch(uDepth, ivec2(gl_FragCoord), 0).r)/2.-0.5, 1.), 0.);
+	float depthDiff = 0.;
+	if(fragDepth < 1.) {
+		int kernelSize = 3;
+		for (int i=-kernelSize; i<=kernelSize; i++) {
+			for (int j=-kernelSize; j<=kernelSize; j++) {
+				if(i != 0 && j != 0) {
+					depthDiff += abs(fragDepth-max(min(getRealDepthFromQuad(texelFetch(uDepth, ivec2(gl_FragCoord) + ivec2(i,j), 0).r)/2.-0.5, 1.), 0.));
+				}
+			}
+		}
+	}
+	
+	retColor = vec3(0., depthDiff, 0.);
 	
 	return retColor;
 }
@@ -136,7 +156,7 @@ vec3 getNightVisionFilter() {
 void main() {
 	vec3 color =  vec3(0.9, 0.6, 0.1);
 	if(vUV.x > 0.01 && vUV.x < 1.-0.01 && vUV.y > 0.01 && vUV.y < 1.-0.01) {
-		color = getSaturatedFilter();
+		color = getXRayFilter();
 	}	
 	
 	fragColor = vec4(color, 1.);
