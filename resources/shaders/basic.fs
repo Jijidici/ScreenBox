@@ -193,11 +193,36 @@ vec3 getZoom() {
 	return retColor;
 }
 
+vec3 getHeatDetector() {
+	vec3 retColor = vec3(0.);
+	
+	float fragDepth = getRealDepthFromQuad(texelFetch(uDepth, ivec2(gl_FragCoord), 0).r);
+	if(fragDepth < 5.) {
+		int goodSampleCount = 0;
+		float sampleDepth = 100.;
+		int kernelSize = 10;
+		int step = 2;
+		for (int i=-step*kernelSize; i<=step*kernelSize; i+=step) {
+			for (int j=-step*kernelSize; j<=step*kernelSize; j+=step) {
+				sampleDepth = getRealDepthFromQuad(texelFetch(uDepth, ivec2(gl_FragCoord) + ivec2(i, j), 0).r);
+				if(sampleDepth < 5.) {
+					++goodSampleCount;
+				}
+			}
+		}
+		
+		float heatCoef = float(goodSampleCount)/float((2*kernelSize+1)*(2*kernelSize+1));
+		retColor = HSLtoRGB(int(225.*(1-heatCoef)), 1., 0.5);
+	}
+	
+	return retColor;
+}
+
 // MAIN
 void main() {
 	vec3 color =  vec3(0.9, 0.6, 0.1);
 	if(vUV.x > 0.01 && vUV.x < 1.-0.01 && vUV.y > 0.01 && vUV.y < 1.-0.01) {
-		color = getZoom();
+		color = getHeatDetector();
 	}	
 	
 	fragColor = vec4(color, 1.);
