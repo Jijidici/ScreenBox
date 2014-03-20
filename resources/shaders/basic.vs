@@ -11,11 +11,13 @@ uniform mat4 uMatView = mat4(1.f);
 uniform mat4 uMatModel = mat4(1.f);
 
 out vec3 vPosition;
+out vec3 vViewSpacePosition;
 out vec3 vNormal;
 out vec2 vUV;
 
 void main() {
-	vPosition = (uMatModel * vec4(vPosition, 0.)).xyz;
+	vPosition = (uMatModel * vec4(vPosition, 1.)).xyz;
+	vViewSpacePosition = (uMatView * uMatModel * vec4(position, 1.)).xyz;
 	vNormal = (uMatModel * vec4(normal, 0.)).xyz;
 	vUV = texcoords;
 	gl_Position = uMatProjection * uMatView * uMatModel * vec4(position, 1.);

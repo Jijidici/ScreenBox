@@ -1,6 +1,7 @@
 #version 330
 
 in vec3 vPosition;
+in vec3 vViewSpacePosition;
 in vec3 vNormal;
 in vec2 vUV;
 
@@ -9,6 +10,56 @@ uniform sampler2D uFinal;
 
 out vec4 fragColor;
 
+// UTILITAR FUNCTIONS
+// Hue - Saturation - Luminance to Red - Green - Blue model conversion
+vec3 HSLtoRGB(int h, float s, float l){
+	vec3 color;	
+	float c = (1. - abs(2 * l - 1.)) * s;
+	float m = 1. * (l - 0.5 * c);
+	float x = c * (1. - abs(mod(h / 60., 2) - 1.));
+
+	h = h%360;
+	if(h >= 0 && h < 60){ color = vec3(c + m, x + m, m); }
+	else if(h >= 60 && h < 120){ color = vec3(x + m, c + m, m);	}
+	else if(h >= 120 && h < 180){ color = vec3(m, c + m, x + m); }
+	else if(h >= 180 && h < 240){ color = vec3(m, x + m, c + m); }
+	else if(h >= 240 && h < 300){ color = vec3(x + m, m, c + m); }
+	else if(h >= 300 && h < 360){ color = vec3(c + m, m, x + m); }
+	else{ color = vec3(m, m, m); }
+	return color;
+}
+
+vec3 RGBtoHSL(float r, float g, float b){
+	float h = 0;
+	float s = 0;
+	float l = 0;
+
+	float var_min = min(min(r, g), b);
+	float var_max = max(max(r, g), b);
+	float del_max = var_max - var_min;
+
+	l = (var_max + var_min)*0.5;
+
+	if(del_max != 0){
+		if(l < 0.5) s = del_max / (var_max + var_min);
+		else 		s = del_max / (2 - var_max - var_min);
+
+		float del_r = (((var_max - r)/6.) + (del_max*0.5)) / del_max;
+		float del_g = (((var_max - g)/6.) + (del_max*0.5)) / del_max;
+		float del_b = (((var_max - b)/6.) + (del_max*0.5)) / del_max;
+
+		if(r == var_max) h = del_b - del_g;
+		else if(g == var_max) h = 1./3. + del_r - del_b;
+		else if(b == var_max) h = 2./3. + del_g - del_r;
+
+		if(h < 0) h += 1;
+		if(h > 1) h -= 1;
+		h *= 360;
+		return vec3(h,s,l);
+	}
+}
+
+// SHADING FUNCTIONS
 vec3 getInvertedFilter() {
 	ivec2 fragCoord = ivec2(gl_FragCoord.xy);
 	
@@ -22,7 +73,7 @@ vec3 getInvertedFilter() {
 }
 
 vec3 getToonFilter() {
-	vec3 retColor = vec3(1.f, 0.f, 1.f);
+	vec3 retColor = texelFetch( uFinal, ivec2(gl_FragCoord), 0).rgb;
 	
 	// gradient matrix
 	mat3 G[2] = mat3[](
@@ -31,7 +82,7 @@ vec3 getToonFilter() {
 	);
 	
 	// quantification
-	retColor = 5.*texelFetch( uFinal, ivec2(gl_FragCoord), 0).rgb;
+	retColor = 5.*retColor;
 	ivec3 integerColor = ivec3(retColor.r, retColor.g, retColor.b);
 	retColor = vec3(integerColor.r*0.2, integerColor.g*0.2, integerColor.b*0.2);
 	if(retColor.r > 0.) { retColor.r += 0.1; }
@@ -55,10 +106,27 @@ vec3 getToonFilter() {
 	return retColor;
 }
 
+vec3 getSaturatedFilter() {
+	ivec2 fragCoord = ivec2(gl_FragCoord);
+
+	vec3 retColor = texelFetch( uFinal, fragCoord, 0).rgb;
+	vec3 hslColor = RGBtoHSL(retColor.r, retColor.g, retColor.b);
+	
+	float depth = texelFetch(uDepth, fragCoord, 0).r;
+	float quadFragDepth = length(vViewSpacePosition);
+	float realDepth = (2. * 0.1 * 100. / (100. + 0.1 - (2.*depth-1.) * (100. - 0.1))) - quadFragDepth;
+	
+	hslColor.y = 1. - max(min((realDepth/2.)-0.5, 1.), 0.);
+	retColor = HSLtoRGB(int(hslColor.x+180.), hslColor.y, hslColor.z);
+	
+	return retColor;
+}
+
+// MAIN
 void main() {
 	vec3 color =  vec3(0.9f, 0.6f, 0.1f);
 	if(vUV.x > 0.01 && vUV.x < 1.-0.01 && vUV.y > 0.01 && vUV.y < 1.-0.01) {
-		color = getToonFilter();
+		color = getSaturatedFilter();
 	}	
 	
 	fragColor = vec4(color, 1.);
