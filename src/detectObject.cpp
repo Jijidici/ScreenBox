@@ -209,7 +209,7 @@ bool isPointInRect(const Point pt, const Rect rc)
 
 
 // Main loop that runs forever, until the user hits Escape to quit.
-Vec2i returnFacePosition(VideoCapture &videoCapture, CascadeClassifier &faceCascade, CascadeClassifier &eyeCascade1, CascadeClassifier &eyeCascade2)
+Rect returnFacePosition(VideoCapture &videoCapture, CascadeClassifier &faceCascade, CascadeClassifier &eyeCascade1, CascadeClassifier &eyeCascade2)
 {
     Ptr<FaceRecognizer> model;
     vector<Mat> preprocessedFaces;
@@ -230,8 +230,6 @@ Vec2i returnFacePosition(VideoCapture &videoCapture, CascadeClassifier &faceCasc
     Mat displayedFrame;
     cameraFrame.copyTo(displayedFrame);
 
-    // Run the face recognition system on the camera image. It will draw some things onto the given image, so make sure it is not read-only memory!
-    int identity = -1;
 
     // Find a face and preprocess it to have a standard size and contrast & brightness.
     Rect faceRect;  // Position of detected face.
@@ -239,10 +237,8 @@ Vec2i returnFacePosition(VideoCapture &videoCapture, CascadeClassifier &faceCasc
     Point leftEye, rightEye;    // Position of the detected eyes.
 	Mat preprocessedFace = getPreprocessedFace(displayedFrame, faceWidth, faceCascade, eyeCascade1, eyeCascade2, preprocessLeftAndRightSeparately, &faceRect, &leftEye, &rightEye, &searchedLeftEye, &searchedRightEye);
 
-    // Draw an anti-aliased rectangle around the detected face.
     if (faceRect.width > 0) {
-		//Vec2i facePosition(faceRect.x+(faceRect.width/2),faceRect.y-(faceRect.height/2));
-		Vec2i facePosition(faceRect.x,faceRect.y);
-		return facePosition;
+		
+		return faceRect;
     }
 }

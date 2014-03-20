@@ -66,4 +66,4 @@ void initDetectors(CascadeClassifier &faceCascade, CascadeClassifier &eyeCascade
 // Get access to the webcam.
 void initWebcam(VideoCapture &videoCapture, int cameraNumber);
 
-Vec2i returnFacePosition(VideoCapture &videoCapture, CascadeClassifier &faceCascade, CascadeClassifier &eyeCascade1, CascadeClassifier &eyeCascade2);
+Rect returnFacePosition(VideoCapture &videoCapture, CascadeClassifier &faceCascade, CascadeClassifier &eyeCascade1, CascadeClassifier &eyeCascade2);

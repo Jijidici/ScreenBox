@@ -399,19 +399,18 @@ void ScreenBox::launch() {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// Compute view matrices
-		cv::Vec2i facePos = returnFacePosition(videoCapture, faceCascade, eyeCascade1, eyeCascade2);
+		cv::Rect facePos = returnFacePosition(videoCapture, faceCascade, eyeCascade1, eyeCascade2);
 
 		glm::vec3 cameraPos(0., 0., -3);
-		float fMovementCoef = 2.f;
-		if(facePos[0] >= 0 && facePos[0] < _iW && facePos[1] >= 0 && facePos[1] < _iH) {
-			cameraPos.x =   ((static_cast<float>(facePos[0]/1)/(WEBCAM_WIDTH/1.f))*2.f -1.)* fMovementCoef;
-			cameraPos.y = -((static_cast<float>(facePos[1]/1)/(WEBCAM_HEIGHT/1.f))*2.f -1.) * fMovementCoef;
+		if(facePos.x >= 0 && facePos.x < _iW && facePos.y >= 0 && facePos.y < _iH) {
+			cameraPos.x =   ((static_cast<float>(facePos.x+facePos.width/2)/(WEBCAM_WIDTH))*2.f -1.)* (static_cast<float>(facePos.width)/200.f);
+			cameraPos.y = -((static_cast<float>(facePos.y+facePos.height/2)/(WEBCAM_HEIGHT))*2.f -1.) * (static_cast<float>(facePos.height)/200.f);
 		}
 
 		cameraPos = (cameraPos + prevCameraPos)*0.5f;
 		prevCameraPos = cameraPos;
 
-		glm::mat4 worldToView = glm::lookAt(cameraPos, cameraPos+glm::vec3(0.f, 0.f, 1.f), glm::vec3(0.f, 1.f, 0.f));  // JOJO ! C'est ici que je récupère la matrice de vue de la caméra, il suffit que le programme de détection la mette ici
+		glm::mat4 worldToView = glm::lookAt(cameraPos, cameraPos+glm::vec3(0.f, 0.f, 1.f), glm::vec3(0.f, 2.f, 0.f));  // JOJO ! C'est ici que je récupère la matrice de vue de la caméra, il suffit que le programme de détection la mette ici
 		glm::mat4 worldToScreen = cameraProjection * worldToView;
 		glm::mat4 screenToWorld = glm::transpose(glm::inverse(worldToScreen));
 
