@@ -250,13 +250,21 @@ void ScreenBox::init() {
 	_pSM->addUniformLocation("shadow", "uMatView", "s_mat_view");
 	_pSM->addUniformLocation("shadow", "uMatModel", "s_mat_model");
 
+	_pSM->addShader("basic", "shaders/basic.vs", "shaders/basic.fs");
+	_pSM->addUniformLocation("basic", "uMatProjection", "bas_mat_proj");
+	_pSM->addUniformLocation("basic", "uMatView", "bas_mat_view");
+	_pSM->addUniformLocation("basic", "uMatModel", "bas_mat_model");
+	_pSM->addUniformLocation("basic", "uDepth", "bas_depth");
+	_pSM->addUniformLocation("basic", "uFinal", "bas_final");
+
 	// Build FBOs
 	_pTM = new TextureManager();
-	_pTM->generateProcessTextures(4);
+	_pTM->generateProcessTextures(5);
 	_pTM->initProcessTexture(0, _iW, _iH, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
 	_pTM->initProcessTexture(1, _iW, _iH, GL_RGBA32F, GL_RGBA, GL_FLOAT);
 	_pTM->initProcessTexture(2, _iW, _iH, GL_DEPTH_COMPONENT24, GL_DEPTH_COMPONENT, GL_FLOAT);
 	_pTM->initProcessTexture(3, SHADOW_MAP_SIZE, SHADOW_MAP_SIZE, GL_DEPTH_COMPONENT24, GL_DEPTH_COMPONENT, GL_FLOAT);
+	_pTM->initProcessTexture(4, _iW, _iH, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
 
 	glGenFramebuffers(1, &_gbufferFBO);
 	glBindFramebuffer(GL_FRAMEBUFFER, _gbufferFBO);
@@ -273,6 +281,13 @@ void ScreenBox::init() {
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT , GL_TEXTURE_2D, _pTM->getProcessTexture(3), 0);
 	if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
 		std::cout << "[!] Error on building shadow Framebuffer" << std::endl;
+	}
+
+	glGenFramebuffers(1, &_finalFBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, _finalFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 , GL_TEXTURE_2D, _pTM->getProcessTexture(4), 0);
+	if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+		std::cout << "[!] Error on building final Framebuffer" << std::endl;
 	}
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -329,6 +344,16 @@ void ScreenBox::launch() {
 	groundObjectToWorld = glm::rotate(groundObjectToWorld, 90.f, glm::vec3(1.f, 0.f, 0.f));
 	groundObjectToWorld = glm::scale(groundObjectToWorld, glm::vec3(100.f, 100.f, 1.f));
 
+	std::vector<glm::mat4> quadsObjectToWorld(8);
+	for(int i=0; i<8; ++i) {
+		quadsObjectToWorld[i] = glm::rotate(glm::mat4(1.f), i*(360.f/8.f), glm::vec3(0.f, 1.f, 0.f));
+		quadsObjectToWorld[i] = glm::translate(quadsObjectToWorld[i], glm::vec3(0.f, 1.f, -2.f));
+	}
+
+
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_FRONT);
+
 	while(!glfwWindowShouldClose(_pWindow)) {
 		_dTime = glfwGetTime();
 
@@ -336,13 +361,15 @@ void ScreenBox::launch() {
 		 * ********* RENDER ZONE	
 		 * *************************************************** */
 
-		// clean the default framebuffer
+		// clean the final framebuffer
+		glBindFramebuffer(GL_FRAMEBUFFER, _finalFBO);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		/// FIRST PASS - GEOMETRY RENDERING ///
 		glBindFramebuffer(GL_FRAMEBUFFER, _gbufferFBO);
 		GLenum gbufferDrawBuffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
 		glDrawBuffers(2, gbufferDrawBuffers);
+		glCullFace(GL_BACK);
 
 		glEnable(GL_DEPTH_TEST);
 		glViewport(0, 0, _iW, _iH);
@@ -375,6 +402,8 @@ void ScreenBox::launch() {
 		_pTM->unbindTexture(GL_TEXTURE0);
 		_pTM->unbindTexture(GL_TEXTURE1);
 		_pTM->unbindTexture(GL_TEXTURE2);
+		
+		glCullFace(GL_FRONT);
 
 		/// SECOND PASS - DEFERRED RENDERING ///
 		for(unsigned int i=0; i<_lights.size(); ++i) {
@@ -395,6 +424,7 @@ void ScreenBox::launch() {
 			glEnable(GL_DEPTH_TEST);
 
 			// draw scene
+			glCullFace(GL_BACK);
 			glUseProgram(_pSM->getShader("shadow"));
 			glUniformMatrix4fv(_pSM->getUniformLocation("s_mat_proj"), 1, GL_FALSE, glm::value_ptr(lightProjection));
 			glUniformMatrix4fv(_pSM->getUniformLocation("s_mat_view"), 1, GL_FALSE, glm::value_ptr(worldToLight));
@@ -403,9 +433,11 @@ void ScreenBox::launch() {
 			glUniformMatrix4fv(_pSM->getUniformLocation("s_mat_model"), 1, GL_FALSE, glm::value_ptr(groundObjectToWorld));
 			glBindVertexArray(_quadVAO);
 			glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
+			glCullFace(GL_FRONT);
 
 			// render lighting
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			glBindFramebuffer(GL_FRAMEBUFFER, _finalFBO);
+			glDrawBuffers(1, &(gbufferDrawBuffers[0]));
 			glViewport(0, 0, _iW, _iH);
 			glDisable(GL_DEPTH_TEST);
 			glEnable(GL_BLEND);
@@ -436,6 +468,37 @@ void ScreenBox::launch() {
 			glDisable(GL_BLEND);
 		}
 
+		/// LAST PASS - FILTER QUADS DRAWING ///
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glViewport(0, 0, _iW, _iH);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glDisable(GL_DEPTH_TEST);
+
+		// draw scene as background
+		glUseProgram(_pSM->getShader("blit"));
+		glUniform1i(_pSM->getUniformLocation("b_tex"), 0);
+		_pTM->bindTexture(4, GL_TEXTURE0);
+		glBindVertexArray(_quadVAO);
+		glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
+		
+		// draw the quads
+		glCullFace(GL_BACK);
+		glUseProgram(_pSM->getShader("basic"));
+		glUniformMatrix4fv(_pSM->getUniformLocation("bas_mat_proj"), 1, GL_FALSE, glm::value_ptr(cameraProjection));
+		glUniformMatrix4fv(_pSM->getUniformLocation("bas_mat_view"), 1, GL_FALSE, glm::value_ptr(worldToView));
+		glUniform1i(_pSM->getUniformLocation("bas_depth"), 2);
+		glUniform1i(_pSM->getUniformLocation("bas_final"), 4);
+
+		_pTM->bindTexture(2, GL_TEXTURE2);
+		_pTM->bindTexture(4, GL_TEXTURE4);
+
+		for(unsigned int i=0; i<quadsObjectToWorld.size(); ++i) {
+			glUniformMatrix4fv(_pSM->getUniformLocation("bas_mat_model"), 1, GL_FALSE, glm::value_ptr(quadsObjectToWorld[i]));
+			glBindVertexArray(_quadVAO);
+			glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
+		}
+		
+		glCullFace(GL_FRONT);
 
 		/// DEBUG VIEW ///
 		glDisable(GL_DEPTH_TEST);
@@ -458,7 +521,7 @@ void ScreenBox::launch() {
 		glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
 
 		glViewport(3*_iW/4, 0, _iW/4, _iH/4);
-		_pTM->bindTexture(3, GL_TEXTURE0);
+		_pTM->bindTexture(4, GL_TEXTURE0);
 		glBindVertexArray(_quadVAO);
 		glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
 
