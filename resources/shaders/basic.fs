@@ -5,6 +5,7 @@ in vec3 vViewSpacePosition;
 in vec3 vNormal;
 in vec2 vUV;
 
+uniform sampler2D uMaterial;
 uniform sampler2D uDepth;
 uniform sampler2D uFinal; 
 
@@ -152,11 +153,40 @@ vec3 getXRayFilter() {
 	return retColor;
 }
 
+vec3 getSSAO() {
+	vec3 retColor = vec3(0.);
+	float fragDepth = getRealDepthFromQuad(texelFetch(uDepth, ivec2(gl_FragCoord), 0).r);
+	if(fragDepth < 5.) {
+		float depthDiff = 0.;
+		int kernelSize = 3;
+		int sampleCount = 0;
+		for (int i=-kernelSize; i<=kernelSize; i++) {
+			for (int j=-kernelSize; j<=kernelSize; j++) {
+				if(i != 0 && j != 0) {
+					float diff = fragDepth-getRealDepthFromQuad(texelFetch(uDepth, ivec2(gl_FragCoord) + ivec2(i,j), 0).r);
+					if(diff > 0. && diff < 0.1) {
+						depthDiff += diff;
+						++sampleCount;
+					}
+				}
+			}
+		}
+		
+		if(sampleCount > 0) {
+			depthDiff = depthDiff/sampleCount;
+		}
+		depthDiff = min(10.*depthDiff, 1);
+		retColor = vec3(1.-depthDiff);
+	}
+	
+	return retColor;
+}
+
 // MAIN
 void main() {
 	vec3 color =  vec3(0.9, 0.6, 0.1);
 	if(vUV.x > 0.01 && vUV.x < 1.-0.01 && vUV.y > 0.01 && vUV.y < 1.-0.01) {
-		color = getXRayFilter();
+		color = getSSAO();
 	}	
 	
 	fragColor = vec4(color, 1.);

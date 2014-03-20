@@ -254,6 +254,7 @@ void ScreenBox::init() {
 	_pSM->addUniformLocation("basic", "uMatProjection", "bas_mat_proj");
 	_pSM->addUniformLocation("basic", "uMatView", "bas_mat_view");
 	_pSM->addUniformLocation("basic", "uMatModel", "bas_mat_model");
+	_pSM->addUniformLocation("basic", "uMaterial", "bas_material");
 	_pSM->addUniformLocation("basic", "uDepth", "bas_depth");
 	_pSM->addUniformLocation("basic", "uFinal", "bas_final");
 
@@ -486,9 +487,11 @@ void ScreenBox::launch() {
 		glUseProgram(_pSM->getShader("basic"));
 		glUniformMatrix4fv(_pSM->getUniformLocation("bas_mat_proj"), 1, GL_FALSE, glm::value_ptr(cameraProjection));
 		glUniformMatrix4fv(_pSM->getUniformLocation("bas_mat_view"), 1, GL_FALSE, glm::value_ptr(worldToView));
+		glUniform1i(_pSM->getUniformLocation("bas_material"), 0);
 		glUniform1i(_pSM->getUniformLocation("bas_depth"), 2);
 		glUniform1i(_pSM->getUniformLocation("bas_final"), 4);
 
+		_pTM->bindTexture(0, GL_TEXTURE0);
 		_pTM->bindTexture(2, GL_TEXTURE2);
 		_pTM->bindTexture(4, GL_TEXTURE4);
 
