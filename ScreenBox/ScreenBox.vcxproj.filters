@@ -27,6 +27,15 @@
     <ClCompile Include="..\src\Light.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\detectObject.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\preprocessFace.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ImageUtils_0.7.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\ScreenBox.h">
@@ -45,6 +54,15 @@
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\Light.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\detectObject.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\preprocessFace.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ImageUtils.h">
       <Filter>src</Filter>
     </ClInclude>
   </ItemGroup>

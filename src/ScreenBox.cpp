@@ -17,6 +17,7 @@
 #include "assimp/scene.h"
 #include "assimp/postprocess.h"
 #include "MouseHandling.h"
+#include "detectObject.h"
 
 #define POSITION_LOCATION 0
 #define NORMAL_LOCATION 1
@@ -25,6 +26,9 @@
 #define BITANGENT_LOCATION 4
 
 #define SHADOW_MAP_SIZE 2046
+
+#define WEBCAM_WIDTH 640.f
+#define WEBCAM_HEIGHT 480.f
 
 void ScreenBox::init() {
 	std::cout << "> INIT SCREENBOX" <<std::endl;
@@ -327,6 +331,8 @@ void ScreenBox::init() {
 void ScreenBox::launch() {
 	std::cout << "> LAUNCH SCREENBOX" <<std::endl;
 
+	glm::vec3 prevCameraPos(0.f, 0.f, -3.f);
+
 	// constant matrices
 	glm::mat4 cameraProjection = glm::perspective(45.f, static_cast<float>(_iW)/static_cast<float>(_iH), 0.1f, 100.f);
 	glm::mat4 lightProjection = glm::perspective(60.f, 1.f, 0.1f, 100.f);
@@ -354,6 +360,23 @@ void ScreenBox::launch() {
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_FRONT);
 
+	//init face detection
+	CascadeClassifier faceCascade;
+    CascadeClassifier eyeCascade1;
+    CascadeClassifier eyeCascade2;
+    VideoCapture videoCapture;
+
+
+    // Load the face and 1 or 2 eye detection XML classifiers.
+    initDetectors(faceCascade, eyeCascade1, eyeCascade2);
+
+
+    // Allow the user to specify a camera number, since not all computers will be the same camera number.
+    int cameraNumber = 0;   // Change this if you want to use a different camera device.
+
+    // Get access to the webcam.
+    initWebcam(videoCapture, cameraNumber);
+
 	while(!glfwWindowShouldClose(_pWindow)) {
 		_dTime = glfwGetTime();
 
@@ -376,7 +399,19 @@ void ScreenBox::launch() {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// Compute view matrices
-		glm::mat4 worldToView = TrackBallCamera::getInstance()->getViewMatrix();  // JOJO ! C'est ici que je récupère la matrice de vue de la caméra, il suffit que le programme de détection la mette ici
+		cv::Vec2i facePos = returnFacePosition(videoCapture, faceCascade, eyeCascade1, eyeCascade2);
+
+		glm::vec3 cameraPos(0., 0., -3);
+		float fMovementCoef = 2.f;
+		if(facePos[0] >= 0 && facePos[0] < _iW && facePos[1] >= 0 && facePos[1] < _iH) {
+			cameraPos.x =   ((static_cast<float>(facePos[0]/1)/(WEBCAM_WIDTH/1.f))*2.f -1.)* fMovementCoef;
+			cameraPos.y = -((static_cast<float>(facePos[1]/1)/(WEBCAM_HEIGHT/1.f))*2.f -1.) * fMovementCoef;
+		}
+
+		cameraPos = (cameraPos + prevCameraPos)*0.5f;
+		prevCameraPos = cameraPos;
+
+		glm::mat4 worldToView = glm::lookAt(cameraPos, cameraPos+glm::vec3(0.f, 0.f, 1.f), glm::vec3(0.f, 1.f, 0.f));  // JOJO ! C'est ici que je récupère la matrice de vue de la caméra, il suffit que le programme de détection la mette ici
 		glm::mat4 worldToScreen = cameraProjection * worldToView;
 		glm::mat4 screenToWorld = glm::transpose(glm::inverse(worldToScreen));
 
@@ -448,7 +483,7 @@ void ScreenBox::launch() {
 			glUniform1i(_pSM->getUniformLocation("d_normal"), 1);
 			glUniform1i(_pSM->getUniformLocation("d_depth"), 2);
 			glUniform1i(_pSM->getUniformLocation("d_shadow"), 3);
-			glUniform3fv(_pSM->getUniformLocation("d_camera_pos"), 1, glm::value_ptr(TrackBallCamera::getInstance()->getCameraPosition()));
+			glUniform3fv(_pSM->getUniformLocation("d_camera_pos"), 1, glm::value_ptr(cameraPos));
 			glUniformMatrix4fv(_pSM->getUniformLocation("d_inv_view_proj"), 1, GL_FALSE, glm::value_ptr(screenToWorld));
 			glUniformMatrix4fv(_pSM->getUniformLocation("d_proj_light"), 1, GL_FALSE, glm::value_ptr(worldToShadowMap));
 			glUniform3fv(_pSM->getUniformLocation("d_light_pos"), 1, glm::value_ptr(lightPos));

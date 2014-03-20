@@ -87,17 +87,23 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\detectObject.cpp" />
+    <ClCompile Include="..\src\ImageUtils_0.7.cpp" />
     <ClCompile Include="..\src\Light.cpp" />
     <ClCompile Include="..\src\main.cpp" />
     <ClCompile Include="..\src\MouseHandling.cpp" />
+    <ClCompile Include="..\src\preprocessFace.cpp" />
     <ClCompile Include="..\src\ScreenBox.cpp" />
     <ClCompile Include="..\src\ShaderManager.cpp" />
     <ClCompile Include="..\src\TextureManager.cpp" />
     <ClCompile Include="..\src\TrackBallCamera.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\detectObject.h" />
+    <ClInclude Include="..\src\ImageUtils.h" />
     <ClInclude Include="..\src\Light.h" />
     <ClInclude Include="..\src\MouseHandling.h" />
+    <ClInclude Include="..\src\preprocessFace.h" />
     <ClInclude Include="..\src\ScreenBox.h" />
     <ClInclude Include="..\src\ShaderManager.h" />
     <ClInclude Include="..\src\TextureManager.h" />
