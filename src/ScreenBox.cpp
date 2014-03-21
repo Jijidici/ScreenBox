@@ -32,6 +32,8 @@ void ScreenBox::init() {
 	_pWindow = NULL;
 	_iW = 1200;
 	_iH = 700;
+	_fTime = 0.f;
+	_iFrame = 0;
 
 	 // Initialise GLFW
     if(!glfwInit()) {
@@ -73,8 +75,8 @@ void ScreenBox::init() {
 	float quad_vertices[] = { -0.5f, 0.5f, 0.f, 0.5f, 0.5f, 0.f, -0.5f, -0.5f, 0.f, 0.5f, -0.5f, 0.f };
 	float quad_normals[] = { 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f };
 	float quad_uv[] = {0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 1.f, 1.f };
-	float quad_tangents[] = { 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f };
-	float quad_bitangents[] = { 0.f, -1.f, 0.f, 0.f, -1.f, 0.f, 0.f, -1.f, 0.f, 0.f, -1.f, 0.f };
+	float quad_tangents[] = { 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f };
+	float quad_bitangents[] = { 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f };
 
 	glGenVertexArrays(1, &_quadVAO);
 	glGenBuffers(6,_quadVBOs);
@@ -327,6 +329,7 @@ void ScreenBox::init() {
 	MouseHandling::getInstance()->bLeftMousePressed = false;
 	MouseHandling::getInstance()->savedPosX = 0.;
 	MouseHandling::getInstance()->savedPosY = 0.;
+	MouseHandling::getInstance()->fSpeed = 0.;
 }
 
 void ScreenBox::launch() {
@@ -349,18 +352,11 @@ void ScreenBox::launch() {
 	groundObjectToWorld = glm::rotate(groundObjectToWorld, 90.f, glm::vec3(1.f, 0.f, 0.f));
 	groundObjectToWorld = glm::scale(groundObjectToWorld, glm::vec3(100.f, 100.f, 1.f));
 
-	std::vector<glm::mat4> quadsObjectToWorld(8);
-	for(int i=0; i<8; ++i) {
-		quadsObjectToWorld[i] = glm::rotate(glm::mat4(1.f), i*(360.f/8.f), glm::vec3(0.f, 1.f, 0.f));
-		quadsObjectToWorld[i] = glm::translate(quadsObjectToWorld[i], glm::vec3(0.f, 1.f, -2.f));
-	}
-
-
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_FRONT);
 
 	while(!glfwWindowShouldClose(_pWindow)) {
-		_dTime = glfwGetTime();
+		double dBeginTime = glfwGetTime();
 
 		/* *************************************************** *
 		 * ********* RENDER ZONE	
@@ -503,9 +499,13 @@ void ScreenBox::launch() {
 		_pTM->bindTexture(2, GL_TEXTURE2);
 		_pTM->bindTexture(4, GL_TEXTURE4);
 
-		for(unsigned int i=0; i<quadsObjectToWorld.size(); ++i) {
-			glUniformMatrix4fv(_pSM->getUniformLocation("bas_mat_model"), 1, GL_FALSE, glm::value_ptr(quadsObjectToWorld[i]));
-			glUniform1i(_pSM->getUniformLocation("bas_id"), i+1);
+		for(unsigned int i=0; i<16; ++i) {
+			float fAddedAngle = MouseHandling::getInstance()->fSpeed*static_cast<float>(_iFrame);
+			if(i%2 == 0) { fAddedAngle *= -1.f; }
+			glm::mat4 quadObjectToWorld = glm::rotate(glm::mat4(1.f), i/2*(360.f/8.f) + fAddedAngle, glm::vec3(0.f, 1.f, 0.f));
+			quadObjectToWorld = glm::translate(quadObjectToWorld, glm::vec3(0.f, static_cast<float>(i%2)*1.1f, -2.f));
+			glUniformMatrix4fv(_pSM->getUniformLocation("bas_mat_model"), 1, GL_FALSE, glm::value_ptr(quadObjectToWorld));
+			glUniform1i(_pSM->getUniformLocation("bas_id"), (i/2)+1);
 			glBindVertexArray(_quadVAO);
 			glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
 		}
@@ -549,7 +549,14 @@ void ScreenBox::launch() {
 
 		//manage fps
 		double dNewTime = glfwGetTime();
-		_fFPS = 1.f/static_cast<float>(dNewTime-_dTime);
+		_fFPS = 1.f/static_cast<float>(dNewTime-dBeginTime);
+		if(MouseHandling::getInstance()->fSpeed > 0.f) {
+			_fTime += static_cast<float>(dNewTime-dBeginTime);
+		}
+
+		if(MouseHandling::getInstance()->fSpeed>0.f) {
+			++_iFrame;
+		}
 
 		std::stringstream fpsStream;
 		fpsStream << "Screen Box - " << _fFPS << "FPS";
@@ -618,6 +625,15 @@ void ScreenBox::onKey(GLFWwindow* window, int key, int scancode, int action, int
 		MouseHandling::getInstance()->fGamma -= 0.5f;
 	}
 	std::cout << ">> Gamma : " << MouseHandling::getInstance()->fGamma << std::endl;
+
+	if(key == GLFW_KEY_E) {
+		MouseHandling::getInstance()->fSpeed += 0.1f;
+	} else if(key == GLFW_KEY_D) {
+		if(MouseHandling::getInstance()->fSpeed > 0.f) {
+			MouseHandling::getInstance()->fSpeed -= 0.1f;
+		}
+	}
+	std::cout << ">> Speed : " << MouseHandling::getInstance()->fSpeed << std::endl;
 }
 
 void ScreenBox::onScroll(GLFWwindow* window, double xoffset, double yoffset) {

@@ -10,6 +10,7 @@ public:
 	double savedPosX;
 	double savedPosY;
 	float fGamma;
+	float fSpeed;
 
 	static MouseHandling* getInstance();
 

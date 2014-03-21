@@ -188,7 +188,7 @@ vec3 getSSAO() {
 vec3 getZoom() {
 	vec3 retColor = vec3(0.);
 	ivec2 fragCoord = ivec2(gl_FragCoord.xy - uWinSize/2);
-	fragCoord = ivec2(int(fragCoord.x/1.5), int(fragCoord.y/1.5));
+	fragCoord = fragCoord/2;
 	fragCoord += uWinSize/2;
 	retColor = texelFetch(uFinal, fragCoord, 0).rgb;
 	
