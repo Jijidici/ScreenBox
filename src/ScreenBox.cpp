@@ -259,6 +259,7 @@ void ScreenBox::init() {
 	_pSM->addUniformLocation("basic", "uDepth", "bas_depth");
 	_pSM->addUniformLocation("basic", "uNormal", "bas_normal");
 	_pSM->addUniformLocation("basic", "uFinal", "bas_final");
+	_pSM->addUniformLocation("basic", "uID", "bas_id");
 
 	// Build FBOs
 	_pTM = new TextureManager();
@@ -502,6 +503,7 @@ void ScreenBox::launch() {
 
 		for(unsigned int i=0; i<quadsObjectToWorld.size(); ++i) {
 			glUniformMatrix4fv(_pSM->getUniformLocation("bas_mat_model"), 1, GL_FALSE, glm::value_ptr(quadsObjectToWorld[i]));
+			glUniform1i(_pSM->getUniformLocation("bas_id"), i+1);
 			glBindVertexArray(_quadVAO);
 			glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
 		}
