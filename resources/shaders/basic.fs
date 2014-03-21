@@ -7,6 +7,7 @@ in vec2 vUV;
 
 uniform ivec2 uWinSize;
 uniform sampler2D uMaterial;
+uniform sampler2D uNormal;
 uniform sampler2D uDepth;
 uniform sampler2D uFinal; 
 
@@ -218,11 +219,25 @@ vec3 getHeatDetector() {
 	return retColor;
 }
 
+vec3 getFreaky() {
+	vec3 retColor = vec3(0.);
+	
+	vec3 freakyLight = vec3(0., 1., 0.);
+	vec3 normalColor = texelFetch(uNormal, ivec2(gl_FragCoord), 0).xyz;
+	vec3 normal = -normalize(normalColor);
+	float coef = dot(normal, freakyLight);
+	float depth = max(min(getRealDepth(texelFetch(uDepth, ivec2(gl_FragCoord), 0).r) - 5., 1.), 0.);
+	
+	retColor = vec3((normalColor*0.2 + 0.8*coef)*(1-depth));
+	
+	return retColor;
+}
+
 // MAIN
 void main() {
 	vec3 color =  vec3(0.9, 0.6, 0.1);
 	if(vUV.x > 0.01 && vUV.x < 1.-0.01 && vUV.y > 0.01 && vUV.y < 1.-0.01) {
-		color = getHeatDetector();
+		color = getFreaky();
 	}	
 	
 	fragColor = vec4(color, 1.);

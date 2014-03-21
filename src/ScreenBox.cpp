@@ -257,6 +257,7 @@ void ScreenBox::init() {
 	_pSM->addUniformLocation("basic", "uWinSize", "bas_win_size");
 	_pSM->addUniformLocation("basic", "uMaterial", "bas_material");
 	_pSM->addUniformLocation("basic", "uDepth", "bas_depth");
+	_pSM->addUniformLocation("basic", "uNormal", "bas_normal");
 	_pSM->addUniformLocation("basic", "uFinal", "bas_final");
 
 	// Build FBOs
@@ -490,10 +491,12 @@ void ScreenBox::launch() {
 		glUniformMatrix4fv(_pSM->getUniformLocation("bas_mat_view"), 1, GL_FALSE, glm::value_ptr(worldToView));
 		glUniform2i(_pSM->getUniformLocation("bas_win_size"), _iW, _iH);
 		glUniform1i(_pSM->getUniformLocation("bas_material"), 0);
+		glUniform1i(_pSM->getUniformLocation("bas_normal"), 1);
 		glUniform1i(_pSM->getUniformLocation("bas_depth"), 2);
 		glUniform1i(_pSM->getUniformLocation("bas_final"), 4);
 
 		_pTM->bindTexture(0, GL_TEXTURE0);
+		_pTM->bindTexture(1, GL_TEXTURE1);
 		_pTM->bindTexture(2, GL_TEXTURE2);
 		_pTM->bindTexture(4, GL_TEXTURE4);
 
