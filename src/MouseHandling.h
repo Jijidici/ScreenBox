@@ -9,6 +9,7 @@ public:
 	bool bLeftMousePressed;
 	double savedPosX;
 	double savedPosY;
+	float fGamma;
 
 	static MouseHandling* getInstance();
 

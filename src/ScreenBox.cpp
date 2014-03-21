@@ -230,6 +230,7 @@ void ScreenBox::init() {
 
 	_pSM->addShader("blit", "shaders/blit.vs", "shaders/blit.fs");
 	_pSM->addUniformLocation("blit", "uTexture1", "b_tex");
+	_pSM->addUniformLocation("blit", "uGamma", "b_gamma");
 
 	_pSM->addShader("deferred", "shaders/blit.vs", "shaders/deferred.fs");
 	_pSM->addUniformLocation("deferred", "uMaterial", "d_material");
@@ -481,6 +482,7 @@ void ScreenBox::launch() {
 		// draw scene as background
 		glUseProgram(_pSM->getShader("blit"));
 		glUniform1i(_pSM->getUniformLocation("b_tex"), 0);
+		glUniform1f(_pSM->getUniformLocation("b_gamma"), MouseHandling::getInstance()->fGamma);
 		_pTM->bindTexture(4, GL_TEXTURE0);
 		glBindVertexArray(_quadVAO);
 		glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
@@ -515,6 +517,7 @@ void ScreenBox::launch() {
 		glDisable(GL_DEPTH_TEST);
 		glUseProgram(_pSM->getShader("blit"));
 		glUniform1i(_pSM->getUniformLocation("b_tex"), 0);
+		glUniform1f(_pSM->getUniformLocation("b_gamma"), 0.f);
 
 		glViewport(0, 0, _iW/4, _iH/4);
 		_pTM->bindTexture(0, GL_TEXTURE0);
@@ -608,6 +611,13 @@ void ScreenBox::onKey(GLFWwindow* window, int key, int scancode, int action, int
 	if(key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
 		glfwSetWindowShouldClose(window, GL_TRUE);
 	}
+
+	if(key == GLFW_KEY_Z && action == GLFW_PRESS) {
+		MouseHandling::getInstance()->fGamma += 0.5f;
+	} else if(key == GLFW_KEY_S && action == GLFW_PRESS) {
+		MouseHandling::getInstance()->fGamma -= 0.5f;
+	}
+	std::cout << ">> Gamma : " << MouseHandling::getInstance()->fGamma << std::endl;
 }
 
 void ScreenBox::onScroll(GLFWwindow* window, double xoffset, double yoffset) {
