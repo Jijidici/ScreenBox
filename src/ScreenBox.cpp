@@ -511,6 +511,7 @@ void ScreenBox::launch() {
 		glCullFace(GL_FRONT);
 
 		/// DEBUG VIEW ///
+#ifdef _DEBUG
 		glDisable(GL_DEPTH_TEST);
 		glUseProgram(_pSM->getShader("blit"));
 		glUniform1i(_pSM->getUniformLocation("b_tex"), 0);
@@ -534,6 +535,7 @@ void ScreenBox::launch() {
 		_pTM->bindTexture(4, GL_TEXTURE0);
 		glBindVertexArray(_quadVAO);
 		glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
+#endif
 
 		glfwSwapBuffers(_pWindow);
 

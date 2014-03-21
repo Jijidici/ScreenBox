@@ -238,14 +238,14 @@ vec3 getFreaky() {
 void main() {
 	vec3 color =  vec3(0.9, 0.6, 0.1);
 	if(vUV.x > 0.01 && vUV.x < 1.-0.01 && vUV.y > 0.01 && vUV.y < 1.-0.01) {
-		if(uID == 1) { color = getInvertedFilter(); }
+		if(uID == 1) { color = getSSAO(); }
 		if(uID == 2) { color = getToonFilter(); }
-		if(uID == 3) { color = getSaturatedFilter(); }
-		if(uID == 4) { color = getXRayFilter(); }
-		if(uID == 5) { color = getSSAO(); }
+		if(uID == 3) { color = getFreaky(); }
+		if(uID == 4) { color = getSaturatedFilter(); }
+		if(uID == 5) { color = getInvertedFilter(); }
 		if(uID == 6) { color = getZoom(); }
 		if(uID == 7) { color = getHeatDetector(); }
-		if(uID == 8) { color = getFreaky(); }
+		if(uID == 8) { color = getXRayFilter(); }
 	}	
 	
 	fragColor = vec4(color, 1.);
