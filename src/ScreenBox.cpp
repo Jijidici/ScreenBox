@@ -36,6 +36,8 @@ void ScreenBox::init() {
 	_pWindow = NULL;
 	_iW = 1200;
 	_iH = 700;
+	_fTime = 0.f;
+	_iFrame = 0;
 
 	 // Initialise GLFW
     if(!glfwInit()) {
@@ -77,8 +79,8 @@ void ScreenBox::init() {
 	float quad_vertices[] = { -0.5f, 0.5f, 0.f, 0.5f, 0.5f, 0.f, -0.5f, -0.5f, 0.f, 0.5f, -0.5f, 0.f };
 	float quad_normals[] = { 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f };
 	float quad_uv[] = {0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 1.f, 1.f };
-	float quad_tangents[] = { 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f };
-	float quad_bitangents[] = { 0.f, -1.f, 0.f, 0.f, -1.f, 0.f, 0.f, -1.f, 0.f, 0.f, -1.f, 0.f };
+	float quad_tangents[] = { 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f };
+	float quad_bitangents[] = { 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f };
 
 	glGenVertexArrays(1, &_quadVAO);
 	glGenBuffers(6,_quadVBOs);
@@ -234,6 +236,7 @@ void ScreenBox::init() {
 
 	_pSM->addShader("blit", "shaders/blit.vs", "shaders/blit.fs");
 	_pSM->addUniformLocation("blit", "uTexture1", "b_tex");
+	_pSM->addUniformLocation("blit", "uGamma", "b_gamma");
 
 	_pSM->addShader("deferred", "shaders/blit.vs", "shaders/deferred.fs");
 	_pSM->addUniformLocation("deferred", "uMaterial", "d_material");
@@ -258,8 +261,12 @@ void ScreenBox::init() {
 	_pSM->addUniformLocation("basic", "uMatProjection", "bas_mat_proj");
 	_pSM->addUniformLocation("basic", "uMatView", "bas_mat_view");
 	_pSM->addUniformLocation("basic", "uMatModel", "bas_mat_model");
+	_pSM->addUniformLocation("basic", "uWinSize", "bas_win_size");
+	_pSM->addUniformLocation("basic", "uMaterial", "bas_material");
 	_pSM->addUniformLocation("basic", "uDepth", "bas_depth");
+	_pSM->addUniformLocation("basic", "uNormal", "bas_normal");
 	_pSM->addUniformLocation("basic", "uFinal", "bas_final");
+	_pSM->addUniformLocation("basic", "uID", "bas_id");
 
 	// Build FBOs
 	_pTM = new TextureManager();
@@ -326,6 +333,7 @@ void ScreenBox::init() {
 	MouseHandling::getInstance()->bLeftMousePressed = false;
 	MouseHandling::getInstance()->savedPosX = 0.;
 	MouseHandling::getInstance()->savedPosY = 0.;
+	MouseHandling::getInstance()->fSpeed = 0.;
 }
 
 void ScreenBox::launch() {
@@ -350,13 +358,6 @@ void ScreenBox::launch() {
 	groundObjectToWorld = glm::rotate(groundObjectToWorld, 90.f, glm::vec3(1.f, 0.f, 0.f));
 	groundObjectToWorld = glm::scale(groundObjectToWorld, glm::vec3(100.f, 100.f, 1.f));
 
-	std::vector<glm::mat4> quadsObjectToWorld(8);
-	for(int i=0; i<8; ++i) {
-		quadsObjectToWorld[i] = glm::rotate(glm::mat4(1.f), i*(360.f/8.f), glm::vec3(0.f, 1.f, 0.f));
-		quadsObjectToWorld[i] = glm::translate(quadsObjectToWorld[i], glm::vec3(0.f, 1.f, -2.f));
-	}
-
-
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_FRONT);
 
@@ -378,7 +379,7 @@ void ScreenBox::launch() {
     initWebcam(videoCapture, cameraNumber);
 
 	while(!glfwWindowShouldClose(_pWindow)) {
-		_dTime = glfwGetTime();
+		double dBeginTime = glfwGetTime();
 
 		/* *************************************************** *
 		 * ********* RENDER ZONE	
@@ -511,6 +512,7 @@ void ScreenBox::launch() {
 		// draw scene as background
 		glUseProgram(_pSM->getShader("blit"));
 		glUniform1i(_pSM->getUniformLocation("b_tex"), 0);
+		glUniform1f(_pSM->getUniformLocation("b_gamma"), MouseHandling::getInstance()->fGamma);
 		_pTM->bindTexture(4, GL_TEXTURE0);
 		glBindVertexArray(_quadVAO);
 		glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
@@ -520,14 +522,24 @@ void ScreenBox::launch() {
 		glUseProgram(_pSM->getShader("basic"));
 		glUniformMatrix4fv(_pSM->getUniformLocation("bas_mat_proj"), 1, GL_FALSE, glm::value_ptr(cameraProjection));
 		glUniformMatrix4fv(_pSM->getUniformLocation("bas_mat_view"), 1, GL_FALSE, glm::value_ptr(worldToView));
+		glUniform2i(_pSM->getUniformLocation("bas_win_size"), _iW, _iH);
+		glUniform1i(_pSM->getUniformLocation("bas_material"), 0);
+		glUniform1i(_pSM->getUniformLocation("bas_normal"), 1);
 		glUniform1i(_pSM->getUniformLocation("bas_depth"), 2);
 		glUniform1i(_pSM->getUniformLocation("bas_final"), 4);
 
+		_pTM->bindTexture(0, GL_TEXTURE0);
+		_pTM->bindTexture(1, GL_TEXTURE1);
 		_pTM->bindTexture(2, GL_TEXTURE2);
 		_pTM->bindTexture(4, GL_TEXTURE4);
 
-		for(unsigned int i=0; i<quadsObjectToWorld.size(); ++i) {
-			glUniformMatrix4fv(_pSM->getUniformLocation("bas_mat_model"), 1, GL_FALSE, glm::value_ptr(quadsObjectToWorld[i]));
+		for(unsigned int i=0; i<16; ++i) {
+			float fAddedAngle = MouseHandling::getInstance()->fSpeed*static_cast<float>(_iFrame);
+			if(i%2 == 0) { fAddedAngle *= -1.f; }
+			glm::mat4 quadObjectToWorld = glm::rotate(glm::mat4(1.f), i/2*(360.f/8.f) + fAddedAngle, glm::vec3(0.f, 1.f, 0.f));
+			quadObjectToWorld = glm::translate(quadObjectToWorld, glm::vec3(0.f, static_cast<float>(i%2)*1.1f, -2.f));
+			glUniformMatrix4fv(_pSM->getUniformLocation("bas_mat_model"), 1, GL_FALSE, glm::value_ptr(quadObjectToWorld));
+			glUniform1i(_pSM->getUniformLocation("bas_id"), (i/2)+1);
 			glBindVertexArray(_quadVAO);
 			glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
 		}
@@ -535,9 +547,11 @@ void ScreenBox::launch() {
 		glCullFace(GL_FRONT);
 
 		/// DEBUG VIEW ///
+#ifdef _DEBUG
 		glDisable(GL_DEPTH_TEST);
 		glUseProgram(_pSM->getShader("blit"));
 		glUniform1i(_pSM->getUniformLocation("b_tex"), 0);
+		glUniform1f(_pSM->getUniformLocation("b_gamma"), 0.f);
 
 		glViewport(0, 0, _iW/4, _iH/4);
 		_pTM->bindTexture(0, GL_TEXTURE0);
@@ -558,6 +572,7 @@ void ScreenBox::launch() {
 		_pTM->bindTexture(4, GL_TEXTURE0);
 		glBindVertexArray(_quadVAO);
 		glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
+#endif
 
 		glfwSwapBuffers(_pWindow);
 
@@ -568,7 +583,14 @@ void ScreenBox::launch() {
 
 		//manage fps
 		double dNewTime = glfwGetTime();
-		_fFPS = 1.f/static_cast<float>(dNewTime-_dTime);
+		_fFPS = 1.f/static_cast<float>(dNewTime-dBeginTime);
+		if(MouseHandling::getInstance()->fSpeed > 0.f) {
+			_fTime += static_cast<float>(dNewTime-dBeginTime);
+		}
+
+		if(MouseHandling::getInstance()->fSpeed>0.f) {
+			++_iFrame;
+		}
 
 		std::stringstream fpsStream;
 		fpsStream << "Screen Box - " << _fFPS << "FPS";
@@ -630,6 +652,22 @@ void ScreenBox::onKey(GLFWwindow* window, int key, int scancode, int action, int
 	if(key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
 		glfwSetWindowShouldClose(window, GL_TRUE);
 	}
+
+	if(key == GLFW_KEY_Z && action == GLFW_PRESS) {
+		MouseHandling::getInstance()->fGamma += 0.5f;
+	} else if(key == GLFW_KEY_S && action == GLFW_PRESS) {
+		MouseHandling::getInstance()->fGamma -= 0.5f;
+	}
+	std::cout << ">> Gamma : " << MouseHandling::getInstance()->fGamma << std::endl;
+
+	if(key == GLFW_KEY_E) {
+		MouseHandling::getInstance()->fSpeed += 0.1f;
+	} else if(key == GLFW_KEY_D) {
+		if(MouseHandling::getInstance()->fSpeed > 0.f) {
+			MouseHandling::getInstance()->fSpeed -= 0.1f;
+		}
+	}
+	std::cout << ">> Speed : " << MouseHandling::getInstance()->fSpeed << std::endl;
 }
 
 void ScreenBox::onScroll(GLFWwindow* window, double xoffset, double yoffset) {

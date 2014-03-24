@@ -31,7 +31,8 @@ private:
 	GLFWwindow* _pWindow;
 	int _iW;
 	int _iH;
-	double _dTime;
+	float _fTime;
+	int _iFrame;
 	float _fFPS;
 
 	int _iQuadTriangleCount;

@@ -9,10 +9,11 @@
 int main(int argc, char** argv) {
 	std::cout << "> PROGRAM LAUNCH" << std::endl;
 
-	ScreenBox sb;
-	sb.init();
-	sb.launch();
-	sb.destroy();
+	ScreenBox* sb = new ScreenBox();
+	sb->init();
+	sb->launch();
+	sb->destroy();
+	delete sb;
 
 	std::cout << "> PROGRAM EXIT" << std::endl;
 	return EXIT_SUCCESS;

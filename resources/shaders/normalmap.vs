@@ -27,5 +27,6 @@ void main() {
 	
 	if(uIsGround == 1) {
 		vUV *= 50.;
+		vNormal = vec3(0., 1., 0.);
 	}
 }
