@@ -131,7 +131,7 @@ void ScreenBox::init() {
 	_iSpaceTriangleCount = 0;
 	int iVerticesCount = 0;
 	Assimp::Importer importer;
-	const aiScene* pScene = importer.ReadFile("models/kerrigan/Kerrigan_infested.obj", aiProcess_Triangulate | aiProcess_FlipUVs);
+	const aiScene* pScene = importer.ReadFile("models/Iron_Man/IronMan.obj", aiProcess_Triangulate | aiProcess_FlipUVs);
 	for(unsigned int iMesh=0; iMesh<pScene->mNumMeshes; ++iMesh) {
 		const aiMesh* pMesh = pScene->mMeshes[iMesh];
 		std::vector<int> space_triangleList;
@@ -229,7 +229,7 @@ void ScreenBox::init() {
 		glVertexAttribPointer(BITANGENT_LOCATION, 3, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT)*3, (void*)0);
 		glBufferData(GL_ARRAY_BUFFER, space_bitangents.size()*sizeof(float), &(space_bitangents[0]), GL_STATIC_DRAW);
 
-		_spaceVertexBuffers.insert(std::make_pair(meshVAO, meshVBOS));
+		_spaceVertexBuffers.push_back(std::make_pair(meshVAO, meshVBOS));
 	}
 	std::cout << "-> Space model loaded : " << _iSpaceTriangleCount << " faces, " << iVerticesCount << " vertices" << std::endl;
 
@@ -314,18 +314,9 @@ void ScreenBox::init() {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	// Build texture
-	_pTM->generateNamedTexture("eye_diff", "models/kerrigan/Kerrigan_inf_eye_D.tga", 3);
-	_pTM->generateNamedTexture("eye_spec", "models/kerrigan/Kerrigan_inf_eye_S.tga", 3);
-	_pTM->generateNamedTexture("eye_norm", "models/kerrigan/Kerrigan_inf_eye_N.tga", 3);
-	_pTM->generateNamedTexture("head_diff", "models/kerrigan/Kerrigan_inf_head_D.tga", 3);
-	_pTM->generateNamedTexture("head_spec", "models/kerrigan/Kerrigan_inf_head_S.tga", 3);
-	_pTM->generateNamedTexture("head_norm", "models/kerrigan/Kerrigan_inf_head_N.tga", 3);
-	_pTM->generateNamedTexture("legswings_diff", "models/kerrigan/Kerrigan_inf_legswings_D.tga", 3);
-	_pTM->generateNamedTexture("legswings_spec", "models/kerrigan/Kerrigan_inf_legswings_S.tga", 3);
-	_pTM->generateNamedTexture("legswings_norm", "models/kerrigan/Kerrigan_inf_legswings_N.tga", 3);
-	_pTM->generateNamedTexture("torso_diff", "models/kerrigan/Kerrigan_inf_torso_D.tga", 3);
-	_pTM->generateNamedTexture("torso_spec", "models/kerrigan/Kerrigan_inf_torso_S.tga", 3);
-	_pTM->generateNamedTexture("torso_norm", "models/kerrigan/Kerrigan_inf_torso_N.tga", 3);
+	_pTM->generateNamedTexture("ironman_diff", "models/Iron_Man/IronMan_D.tga", 3);
+	_pTM->generateNamedTexture("ironman_spec", "models/Iron_Man/IronMan_S.tga", 3);
+	_pTM->generateNamedTexture("ironman_norm", "models/Iron_Man/IronMan_N.tga", 3);
 	_pTM->generateNamedTexture("ground_diff", "models/ground/metal_plate_D.jpg", 3);
 	_pTM->generateNamedTexture("ground_spec", "models/ground/metal_plate_S.jpg", 3);
 	_pTM->generateNamedTexture("ground_norm", "models/ground/metal_plate_N.jpg", 3);
@@ -410,7 +401,7 @@ void ScreenBox::launch() {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// Compute view matrices
-		cv::Rect facePos = returnFacePosition(videoCapture, faceCascade, eyeCascade1, eyeCascade2);
+		//cv::Rect facePos = returnFacePosition(videoCapture, faceCascade, eyeCascade1, eyeCascade2);
 
 		glm::vec3 cameraPos(0., 1.1, -3);
 		/*if(facePos.x >= 0 && facePos.x < _iW && facePos.y >= 0 && facePos.y < _iH) {
@@ -421,7 +412,8 @@ void ScreenBox::launch() {
 		cameraPos = 0.5f*cameraPos + 0.5f*prevCameraPos;
 		prevCameraPos = cameraPos;*/
 
-		glm::mat4 worldToView = glm::lookAt(cameraPos, cameraPos+glm::vec3(0.f, 0.f, 1.f), glm::vec3(0.f, 2.f, 0.f));  // JOJO ! C'est ici que je récupère la matrice de vue de la caméra, il suffit que le programme de détection la mette ici
+		//glm::mat4 worldToView = glm::lookAt(cameraPos, cameraPos+glm::vec3(0.f, 0.f, 1.f), glm::vec3(0.f, 2.f, 0.f));  // JOJO ! C'est ici que je récupère la matrice de vue de la caméra, il suffit que le programme de détection la mette ici
+		glm::mat4 worldToView = TrackBallCamera::getInstance()->getViewMatrix();
 		glm::mat4 worldToScreen = cameraProjection * worldToView;
 		glm::mat4 screenToWorld = glm::transpose(glm::inverse(worldToScreen));
 
@@ -493,7 +485,7 @@ void ScreenBox::launch() {
 			glUniform1i(_pSM->getUniformLocation("d_normal"), 1);
 			glUniform1i(_pSM->getUniformLocation("d_depth"), 2);
 			glUniform1i(_pSM->getUniformLocation("d_shadow"), 3);
-			glUniform3fv(_pSM->getUniformLocation("d_camera_pos"), 1, glm::value_ptr(cameraPos));
+			glUniform3fv(_pSM->getUniformLocation("d_camera_pos"), 1, glm::value_ptr(TrackBallCamera::getInstance()->getCameraPosition()));
 			glUniformMatrix4fv(_pSM->getUniformLocation("d_inv_view_proj"), 1, GL_FALSE, glm::value_ptr(screenToWorld));
 			glUniformMatrix4fv(_pSM->getUniformLocation("d_proj_light"), 1, GL_FALSE, glm::value_ptr(worldToShadowMap));
 			glUniform3fv(_pSM->getUniformLocation("d_light_pos"), 1, glm::value_ptr(lightPos));
@@ -613,7 +605,7 @@ void ScreenBox::destroy() {
 	glDeleteFramebuffers(1, &_shadowFBO);
 	glDeleteVertexArrays(1, &_quadVAO);
 	glDeleteBuffers(6, _quadVBOs);
-	for(std::map<GLuint, std::vector<GLuint>>::iterator it=_spaceVertexBuffers.begin(); it!=_spaceVertexBuffers.end(); ++it) {
+	for(std::vector<std::pair<GLuint, std::vector<GLuint>>>::iterator it=_spaceVertexBuffers.begin(); it!=_spaceVertexBuffers.end(); ++it) {
 		glDeleteVertexArrays(1, &(it->first));
 		glDeleteBuffers(6, &(it->second[0]));
 	}
@@ -626,29 +618,12 @@ void ScreenBox::destroy() {
 }
 
 void ScreenBox::drawModel() {
-	std::vector<std::string> kerriganTexNames;
-	kerriganTexNames.push_back("eye_diff");
-	kerriganTexNames.push_back("eye_spec");
-	kerriganTexNames.push_back("eye_norm");
-	kerriganTexNames.push_back("legswings_diff");
-	kerriganTexNames.push_back("legswings_spec");
-	kerriganTexNames.push_back("legswings_norm");
-	kerriganTexNames.push_back("head_diff");
-	kerriganTexNames.push_back("head_spec");
-	kerriganTexNames.push_back("head_norm");
-	kerriganTexNames.push_back("torso_diff");
-	kerriganTexNames.push_back("torso_spec");
-	kerriganTexNames.push_back("torso_norm");
+	_pTM->bindTexture("ironman_diff", GL_TEXTURE0);
+	_pTM->bindTexture("ironman_spec", GL_TEXTURE1);
+	_pTM->bindTexture("ironman_norm", GL_TEXTURE2);
 
-	int iNameCursor = 0;
-	for(std::map<GLuint, std::vector<GLuint>>::iterator it=_spaceVertexBuffers.begin(); it!=_spaceVertexBuffers.end(); ++it) {
-		_pTM->bindTexture(kerriganTexNames[iNameCursor++], GL_TEXTURE0);
-		_pTM->bindTexture(kerriganTexNames[iNameCursor++], GL_TEXTURE1);
-		_pTM->bindTexture(kerriganTexNames[iNameCursor++], GL_TEXTURE2);
-
-		glBindVertexArray(it->first);
-		glDrawElementsInstanced(GL_TRIANGLES, _iSpaceTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
-	}
+	glBindVertexArray(_spaceVertexBuffers[0].first);
+	glDrawElementsInstanced(GL_TRIANGLES, _iSpaceTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
 	
 	_pTM->unbindTexture(GL_TEXTURE0);
 	_pTM->unbindTexture(GL_TEXTURE1);

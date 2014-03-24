@@ -42,7 +42,7 @@ private:
 	GLuint _gbufferFBO;
 	GLuint _shadowFBO;
 	GLuint _finalFBO;
-	std::map<GLuint, std::vector<GLuint>> _spaceVertexBuffers;
+	std::vector<std::pair<GLuint, std::vector<GLuint>>> _spaceVertexBuffers;
 	std::vector<Light*> _lights;
 	
 	ShaderManager* _pSM;
