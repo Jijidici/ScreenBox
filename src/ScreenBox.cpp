@@ -402,10 +402,10 @@ void ScreenBox::launch() {
 		// Compute view matrices
 		cv::Rect facePos = returnFacePosition(videoCapture, faceCascade, eyeCascade1, eyeCascade2);
 
-		glm::vec3 cameraPos(0., 0., -3);
+		glm::vec3 cameraPos(0., 1., -3);
 		if(facePos.x >= 0 && facePos.x < _iW && facePos.y >= 0 && facePos.y < _iH) {
-			cameraPos.x =   ((static_cast<float>(facePos.x+facePos.width/2)/(WEBCAM_WIDTH))*2.f -1.)* (static_cast<float>(facePos.width)/200.f);
-			cameraPos.y = -((static_cast<float>(facePos.y+facePos.height/2)/(WEBCAM_HEIGHT))*2.f -1.) * (static_cast<float>(facePos.height)/200.f);
+			cameraPos.x +=   -((static_cast<float>(facePos.x+facePos.width/2)/(WEBCAM_WIDTH))*2.f -1.)* (static_cast<float>(facePos.width)/200.f);
+			cameraPos.y += -((static_cast<float>(facePos.y+facePos.height/2)/(WEBCAM_HEIGHT))*2.f -1.) * (static_cast<float>(facePos.height)/200.f);
 		}
 
 		cameraPos = (cameraPos + prevCameraPos)*0.5f;
