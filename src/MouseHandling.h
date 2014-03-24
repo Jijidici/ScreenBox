@@ -11,6 +11,7 @@ public:
 	double savedPosY;
 	float fGamma;
 	float fSpeed;
+	int selectedFilters[2];
 
 	static MouseHandling* getInstance();
 

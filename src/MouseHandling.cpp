@@ -6,7 +6,8 @@
 MouseHandling* MouseHandling::_pInstance = nullptr;
 
 MouseHandling::MouseHandling() {
-
+	selectedFilters[0] = 1;
+	selectedFilters[1] = 2;
 }
 
 MouseHandling* MouseHandling::getInstance() {

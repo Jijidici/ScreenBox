@@ -30,6 +30,8 @@
 #define WEBCAM_WIDTH 640.f
 #define WEBCAM_HEIGHT 480.f
 
+#define FILTERS_COUNT 8
+
 void ScreenBox::init() {
 	std::cout << "> INIT SCREENBOX" <<std::endl;
 
@@ -411,13 +413,13 @@ void ScreenBox::launch() {
 		cv::Rect facePos = returnFacePosition(videoCapture, faceCascade, eyeCascade1, eyeCascade2);
 
 		glm::vec3 cameraPos(0., 1.1, -3);
-		if(facePos.x >= 0 && facePos.x < _iW && facePos.y >= 0 && facePos.y < _iH) {
+		/*if(facePos.x >= 0 && facePos.x < _iW && facePos.y >= 0 && facePos.y < _iH) {
 			cameraPos.x +=   -((static_cast<float>(facePos.x+facePos.width/2)/(WEBCAM_WIDTH))*2.f -1.)* (static_cast<float>(facePos.width)/200.f);
 			cameraPos.y += -((static_cast<float>(facePos.y+facePos.height/2)/(WEBCAM_HEIGHT))*2.f -1.) * (static_cast<float>(facePos.height)/200.f);
 		}
 
 		cameraPos = 0.5f*cameraPos + 0.5f*prevCameraPos;
-		prevCameraPos = cameraPos;
+		prevCameraPos = cameraPos;*/
 
 		glm::mat4 worldToView = glm::lookAt(cameraPos, cameraPos+glm::vec3(0.f, 0.f, 1.f), glm::vec3(0.f, 2.f, 0.f));  // JOJO ! C'est ici que je récupère la matrice de vue de la caméra, il suffit que le programme de détection la mette ici
 		glm::mat4 worldToScreen = cameraProjection * worldToView;
@@ -545,7 +547,7 @@ void ScreenBox::launch() {
 			glm::mat4 quadObjectToWorld = glm::translate(glm::mat4(1.f), glm::vec3(-0.4f + 0.8f*i, 1.25f, -2.f));
 			quadObjectToWorld = glm::scale(quadObjectToWorld, glm::vec3(0.7f, 0.8f, 1.f));
 			glUniformMatrix4fv(_pSM->getUniformLocation("bas_mat_model"), 1, GL_FALSE, glm::value_ptr(quadObjectToWorld));
-			glUniform1i(_pSM->getUniformLocation("bas_id"), i+1);
+			glUniform1i(_pSM->getUniformLocation("bas_id"), MouseHandling::getInstance()->selectedFilters[i]);
 			glBindVertexArray(_quadVAO);
 			glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
 		}
@@ -674,6 +676,22 @@ void ScreenBox::onKey(GLFWwindow* window, int key, int scancode, int action, int
 		}
 	}
 	std::cout << ">> Speed : " << MouseHandling::getInstance()->fSpeed << std::endl;
+
+	if(key == GLFW_KEY_RIGHT && action == GLFW_PRESS) {
+		for(int i=0; i<2; ++i) {
+			MouseHandling::getInstance()->selectedFilters[i] += 1;
+			if(MouseHandling::getInstance()->selectedFilters[i] > FILTERS_COUNT) {
+				MouseHandling::getInstance()->selectedFilters[i] = 1;
+			}
+		}
+	} else if (key == GLFW_KEY_LEFT && action == GLFW_PRESS) {
+		for(int i=0; i<2; ++i) {
+			MouseHandling::getInstance()->selectedFilters[i] -= 1;
+			if(MouseHandling::getInstance()->selectedFilters[i] < 1) {
+				MouseHandling::getInstance()->selectedFilters[i] = FILTERS_COUNT;
+			}
+		}
+	}
 }
 
 void ScreenBox::onScroll(GLFWwindow* window, double xoffset, double yoffset) {
