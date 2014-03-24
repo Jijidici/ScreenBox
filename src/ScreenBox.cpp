@@ -25,7 +25,7 @@
 #define TANGENT_LOCATION 3
 #define BITANGENT_LOCATION 4
 
-#define SHADOW_MAP_SIZE 2046
+#define SHADOW_MAP_SIZE 1024
 
 #define WEBCAM_WIDTH 640.f
 #define WEBCAM_HEIGHT 480.f
@@ -339,7 +339,7 @@ void ScreenBox::init() {
 void ScreenBox::launch() {
 	std::cout << "> LAUNCH SCREENBOX" <<std::endl;
 
-	glm::vec3 prevCameraPos(0.f, 0.f, -3.f);
+	glm::vec3 prevCameraPos(0.f, 1.1f, -3.f);
 
 	// constant matrices
 	glm::mat4 cameraProjection = glm::perspective(45.f, static_cast<float>(_iW)/static_cast<float>(_iH), 0.1f, 100.f);
@@ -402,13 +402,13 @@ void ScreenBox::launch() {
 		// Compute view matrices
 		cv::Rect facePos = returnFacePosition(videoCapture, faceCascade, eyeCascade1, eyeCascade2);
 
-		glm::vec3 cameraPos(0., 1., -3);
+		glm::vec3 cameraPos(0., 1.1, -3);
 		if(facePos.x >= 0 && facePos.x < _iW && facePos.y >= 0 && facePos.y < _iH) {
 			cameraPos.x +=   -((static_cast<float>(facePos.x+facePos.width/2)/(WEBCAM_WIDTH))*2.f -1.)* (static_cast<float>(facePos.width)/200.f);
 			cameraPos.y += -((static_cast<float>(facePos.y+facePos.height/2)/(WEBCAM_HEIGHT))*2.f -1.) * (static_cast<float>(facePos.height)/200.f);
 		}
 
-		cameraPos = (cameraPos + prevCameraPos)*0.5f;
+		cameraPos = 0.5f*cameraPos + 0.5f*prevCameraPos;
 		prevCameraPos = cameraPos;
 
 		glm::mat4 worldToView = glm::lookAt(cameraPos, cameraPos+glm::vec3(0.f, 0.f, 1.f), glm::vec3(0.f, 2.f, 0.f));  // JOJO ! C'est ici que je récupère la matrice de vue de la caméra, il suffit que le programme de détection la mette ici
@@ -533,13 +533,11 @@ void ScreenBox::launch() {
 		_pTM->bindTexture(2, GL_TEXTURE2);
 		_pTM->bindTexture(4, GL_TEXTURE4);
 
-		for(unsigned int i=0; i<16; ++i) {
-			float fAddedAngle = MouseHandling::getInstance()->fSpeed*static_cast<float>(_iFrame);
-			if(i%2 == 0) { fAddedAngle *= -1.f; }
-			glm::mat4 quadObjectToWorld = glm::rotate(glm::mat4(1.f), i/2*(360.f/8.f) + fAddedAngle, glm::vec3(0.f, 1.f, 0.f));
-			quadObjectToWorld = glm::translate(quadObjectToWorld, glm::vec3(0.f, static_cast<float>(i%2)*1.1f, -2.f));
+		for(unsigned int i=0; i<2; ++i) {
+			glm::mat4 quadObjectToWorld = glm::translate(glm::mat4(1.f), glm::vec3(-0.4f + 0.8f*i, 1.25f, -2.f));
+			quadObjectToWorld = glm::scale(quadObjectToWorld, glm::vec3(0.7f, 0.8f, 1.f));
 			glUniformMatrix4fv(_pSM->getUniformLocation("bas_mat_model"), 1, GL_FALSE, glm::value_ptr(quadObjectToWorld));
-			glUniform1i(_pSM->getUniformLocation("bas_id"), (i/2)+1);
+			glUniform1i(_pSM->getUniformLocation("bas_id"), i+1);
 			glBindVertexArray(_quadVAO);
 			glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
 		}
