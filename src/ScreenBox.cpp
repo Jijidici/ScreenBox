@@ -34,8 +34,12 @@ void ScreenBox::init() {
 	std::cout << "> INIT SCREENBOX" <<std::endl;
 
 	_pWindow = NULL;
-	_iW = 1200;
-	_iH = 700;
+	_iW = 1366;
+	_iH = 768;
+#ifdef _DEBUG
+	_iW = 1280;
+	_iH = 720;
+#endif
 	_fTime = 0.f;
 	_iFrame = 0;
 
@@ -46,7 +50,11 @@ void ScreenBox::init() {
     }
 
 	// Open a window
-	_pWindow = glfwCreateWindow(_iW, _iH, "ScreenBox", NULL, NULL);
+	GLFWmonitor* pMonitor = glfwGetPrimaryMonitor();
+#ifdef _DEBUG
+	pMonitor = NULL;
+#endif
+	_pWindow = glfwCreateWindow(_iW, _iH, "ScreenBox", pMonitor, NULL);
 	if (!_pWindow) {
         std::cout << "Failed to create a window" <<std::endl;
         glfwTerminate();
