@@ -26,7 +26,7 @@ void main() {
 	gl_Position = uMatProjection * uMatView * uMatModel * vec4(position, 1.);
 	
 	if(uIsGround == 1) {
-		vUV *= 50.;
-		vNormal = vec3(0., 1., 0.);
+		//vUV *= 50.;
+		vNormal = vec3(0., 0., -1.);
 	}
 }

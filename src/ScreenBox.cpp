@@ -317,18 +317,21 @@ void ScreenBox::init() {
 	_pTM->generateNamedTexture("ironman_diff", "models/Iron_Man/IronMan_D.tga", 3);
 	_pTM->generateNamedTexture("ironman_spec", "models/Iron_Man/IronMan_S.tga", 3);
 	_pTM->generateNamedTexture("ironman_norm", "models/Iron_Man/IronMan_N.tga", 3);
-	_pTM->generateNamedTexture("ground_diff", "models/ground/metal_plate_D.jpg", 3);
-	_pTM->generateNamedTexture("ground_spec", "models/ground/metal_plate_S.jpg", 3);
-	_pTM->generateNamedTexture("ground_norm", "models/ground/metal_plate_N.jpg", 3);
+	_pTM->generateNamedTexture("bg_diff", "models/background/background_D.jpg", 3);
+	_pTM->generateNamedTexture("bg_spec", "models/background/background_S.jpg", 3);
+	_pTM->generateNamedTexture("bg_norm", "models/background/background_N.jpg", 3);
 
 	// Init light
-	_lights.push_back(new Light(glm::vec3( 0.f, 0.5f, -5.f), glm::vec3(0.f, 2.f, 0.f), glm::vec3(1.f, 0.7f, 0.7f), 1.f, 20.f));
-	_lights.push_back(new Light(glm::vec3( 0.f, 2.f, -1.f), glm::vec3(0.f, 2.f, 0.f), glm::vec3(1.f, 1.f, 1.f), 1.f, 20.f));
-	_lights.push_back(new Light(glm::vec3( 0.f, -1.5f, -2.f), glm::vec3(0.f, -1.f, 0.f), glm::vec3(0.7f, 1.f, 0.7f), 1.f, 20.f));
-	_lights.push_back(new Light(glm::vec3( 0.f, -1.5f, 2.f), glm::vec3(0.f, -1.f, 0.f), glm::vec3(0.7f, 1.f, 0.7f), 1.f, 20.f));
-	_lights.push_back(new Light(glm::vec3( -2.f, -1.5f, 0.f), glm::vec3(0.f, -1.f, 0.f), glm::vec3(0.7f, 1.f, 0.7f), 1.f, 20.f));
-	_lights.push_back(new Light(glm::vec3( 2.f, -1.5f, 0.f), glm::vec3(0.f, -1.f, 0.f), glm::vec3(0.7f, 1.f, 0.7f), 1.f, 20.f));
-	_lights.push_back(new Light(glm::vec3( 0.f, 5.f, 2.f), glm::vec3(0.f, -1.f, 0.f), glm::vec3(0.7f, 0.7f, 1.f), 1.f, 20.f));
+	_lights.push_back(new Light(glm::vec3( 0.3f, 4.f, 0.f), glm::vec3(0.f, 1.f, 0.f), glm::vec3(1.f, 0.9f, 0.7f), 1.f, 20.f));
+	_lights.push_back(new Light(glm::vec3(-0.3f, 4.f, 0.f), glm::vec3(0.f, 1.f, 0.f), glm::vec3(1.f, 0.9f, 0.7f), 1.f, 20.f));
+	_lights.push_back(new Light(glm::vec3( 0.f, 4.f, -2.f), glm::vec3(0.f, 1.f, 0.f), glm::vec3(1.f, 0.9f, 0.7f), 1.f, 20.f));
+	_lights.push_back(new Light(glm::vec3( 0.3f, 0.f, -1.f), glm::vec3(0.f, 2.f, 0.f), glm::vec3(0.8f, 0.8f, 1.f), 0.8f, 20.f));
+	_lights.push_back(new Light(glm::vec3(-0.3f, 0.f, -1.f), glm::vec3(0.f, 2.f, 0.f), glm::vec3(0.8f, 0.8f, 1.f), 0.8f, 20.f));
+	_lights.push_back(new Light(glm::vec3( 0.f, 0.f, -1.f), glm::vec3(0.f, 2.f, 0.f), glm::vec3(0.8f, 0.8f, 1.f), 0.8f, 20.f));
+
+	_lights.push_back(new Light(glm::vec3( -2.f, 10.f, 0.f), glm::vec3(-2.f, 2.f, 2.f), glm::vec3(1.f, 1.f, 1.f), 2.f, 20.f));
+	_lights.push_back(new Light(glm::vec3( 0.f, 10.f, 0.f), glm::vec3(0.f, 2.f, 2.f), glm::vec3(1.f, 1.f, 1.f), 2.f, 20.f));
+	_lights.push_back(new Light(glm::vec3( 2.f, 10.f, 0.f), glm::vec3(2.f, 2.f, 2.f), glm::vec3(1.f, 1.f, 1.f), 2.f, 20.f));
 
 	// Camera manipulation data
 	MouseHandling::getInstance()->bLeftMousePressed = false;
@@ -355,9 +358,8 @@ void ScreenBox::launch() {
 	glm::mat4 modelObjectToWorld = glm::translate(glm::mat4(1.f), glm::vec3(0.f, -2.f, 0.f));
 	modelObjectToWorld = glm::rotate(modelObjectToWorld, 180.f, glm::vec3(0.f, 1.f, 0.f));
 
-	glm::mat4  groundObjectToWorld = glm::translate(glm::mat4(1.f), glm::vec3(0.f, -2.f, 0.f));
-	groundObjectToWorld = glm::rotate(groundObjectToWorld, 90.f, glm::vec3(1.f, 0.f, 0.f));
-	groundObjectToWorld = glm::scale(groundObjectToWorld, glm::vec3(100.f, 100.f, 1.f));
+	glm::mat4  groundObjectToWorld = glm::translate(glm::mat4(1.f), glm::vec3(0.f, 2.f, 2.f));
+	groundObjectToWorld = glm::scale(groundObjectToWorld, glm::vec3(8.f, 8.f, 1.f));
 
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_FRONT);
@@ -401,19 +403,18 @@ void ScreenBox::launch() {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// Compute view matrices
-		//cv::Rect facePos = returnFacePosition(videoCapture, faceCascade, eyeCascade1, eyeCascade2);
+		cv::Rect facePos = returnFacePosition(videoCapture, faceCascade, eyeCascade1, eyeCascade2);
 
 		glm::vec3 cameraPos(0., 1.1, -3);
-		/*if(facePos.x >= 0 && facePos.x < _iW && facePos.y >= 0 && facePos.y < _iH) {
+		if(facePos.x >= 0 && facePos.x < _iW && facePos.y >= 0 && facePos.y < _iH) {
 			cameraPos.x +=   -((static_cast<float>(facePos.x+facePos.width/2)/(WEBCAM_WIDTH))*2.f -1.)* (static_cast<float>(facePos.width)/200.f);
 			cameraPos.y += -((static_cast<float>(facePos.y+facePos.height/2)/(WEBCAM_HEIGHT))*2.f -1.) * (static_cast<float>(facePos.height)/200.f);
 		}
 
 		cameraPos = 0.5f*cameraPos + 0.5f*prevCameraPos;
-		prevCameraPos = cameraPos;*/
+		prevCameraPos = cameraPos;
 
-		//glm::mat4 worldToView = glm::lookAt(cameraPos, cameraPos+glm::vec3(0.f, 0.f, 1.f), glm::vec3(0.f, 2.f, 0.f));  // JOJO ! C'est ici que je récupère la matrice de vue de la caméra, il suffit que le programme de détection la mette ici
-		glm::mat4 worldToView = TrackBallCamera::getInstance()->getViewMatrix();
+		glm::mat4 worldToView = glm::lookAt(cameraPos, cameraPos+glm::vec3(0.f, 0.f, 1.f), glm::vec3(0.f, 2.f, 0.f));  // JOJO ! C'est ici que je récupère la matrice de vue de la caméra, il suffit que le programme de détection la mette ici
 		glm::mat4 worldToScreen = cameraProjection * worldToView;
 		glm::mat4 screenToWorld = glm::transpose(glm::inverse(worldToScreen));
 
@@ -431,9 +432,9 @@ void ScreenBox::launch() {
 		// draw the ground quad
 		glUniformMatrix4fv(_pSM->getUniformLocation("n_mat_model"), 1, GL_FALSE, glm::value_ptr(groundObjectToWorld));
 		glUniform1i(_pSM->getUniformLocation("n_is_ground"), 1);
-		_pTM->bindTexture("ground_diff", GL_TEXTURE0);
-		_pTM->bindTexture("ground_spec", GL_TEXTURE1);
-		_pTM->bindTexture("ground_norm", GL_TEXTURE2);
+		_pTM->bindTexture("bg_diff", GL_TEXTURE0);
+		_pTM->bindTexture("bg_spec", GL_TEXTURE1);
+		_pTM->bindTexture("bg_norm", GL_TEXTURE2);
 		glBindVertexArray(_quadVAO);
 		glDrawElementsInstanced(GL_TRIANGLES, _iQuadTriangleCount*3, GL_UNSIGNED_INT, (void*)0, 1);
 		_pTM->unbindTexture(GL_TEXTURE0);
@@ -485,7 +486,7 @@ void ScreenBox::launch() {
 			glUniform1i(_pSM->getUniformLocation("d_normal"), 1);
 			glUniform1i(_pSM->getUniformLocation("d_depth"), 2);
 			glUniform1i(_pSM->getUniformLocation("d_shadow"), 3);
-			glUniform3fv(_pSM->getUniformLocation("d_camera_pos"), 1, glm::value_ptr(TrackBallCamera::getInstance()->getCameraPosition()));
+			glUniform3fv(_pSM->getUniformLocation("d_camera_pos"), 1, glm::value_ptr(cameraPos));
 			glUniformMatrix4fv(_pSM->getUniformLocation("d_inv_view_proj"), 1, GL_FALSE, glm::value_ptr(screenToWorld));
 			glUniformMatrix4fv(_pSM->getUniformLocation("d_proj_light"), 1, GL_FALSE, glm::value_ptr(worldToShadowMap));
 			glUniform3fv(_pSM->getUniformLocation("d_light_pos"), 1, glm::value_ptr(lightPos));

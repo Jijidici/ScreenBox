@@ -199,7 +199,7 @@ vec3 getHeatDetector() {
 	vec3 retColor = vec3(0.);
 	
 	float fragDepth = getRealDepthFromQuad(texelFetch(uDepth, ivec2(gl_FragCoord), 0).r);
-	if(fragDepth < 5.) {
+	if(fragDepth < 3.) {
 		int goodSampleCount = 0;
 		float sampleDepth = 100.;
 		int kernelSize = 10;
@@ -207,7 +207,7 @@ vec3 getHeatDetector() {
 		for (int i=-step*kernelSize; i<=step*kernelSize; i+=step) {
 			for (int j=-step*kernelSize; j<=step*kernelSize; j+=step) {
 				sampleDepth = getRealDepthFromQuad(texelFetch(uDepth, ivec2(gl_FragCoord) + ivec2(i, j), 0).r);
-				if(sampleDepth < 5.) {
+				if(sampleDepth < 3.) {
 					++goodSampleCount;
 				}
 			}
